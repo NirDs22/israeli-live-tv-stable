@@ -13,6 +13,7 @@ from .utils import data_dir, ensure_file, read_json
 class RuntimePaths:
     userdata: Path
     bundled_channels: Path
+    remote_channels: Path
     user_sources: Path
     tvheadend_mapping: Path
     cache: Path
@@ -33,6 +34,7 @@ def default_paths(settings: AddonSettings | None = None) -> RuntimePaths:
     return RuntimePaths(
         userdata=base,
         bundled_channels=data_dir() / "channels.json",
+        remote_channels=base / "remote_channels.json",
         user_sources=base / "user_sources.json",
         tvheadend_mapping=mapping_path,
         cache=base / "cache.json",

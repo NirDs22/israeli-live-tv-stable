@@ -71,6 +71,7 @@ def build_diagnostics(
         f"Addon userdata path: {paths.userdata}",
         f"user_sources.json path: {paths.user_sources}",
         f"tvheadend_mapping.json path: {paths.tvheadend_mapping}",
+        f"remote_channels.json path: {paths.remote_channels}",
         f"Generated M3U path: {paths.generated_m3u}",
         f"inputstream.adaptive: {addon_enabled('inputstream.adaptive')}",
         f"IPTV Simple Client: {addon_enabled('pvr.iptvsimple')}",
@@ -80,7 +81,13 @@ def build_diagnostics(
         f"Preferred source mode: {settings.preferred_source_mode}",
         f"TVHeadend enabled: {settings.tvheadend_enabled}",
         f"Prefer TVHeadend: {settings.prefer_tvheadend}",
+        f"Remote channel updates enabled: {settings.remote_config_enabled}",
+        f"Remote channel URL: {settings.remote_config_url}",
     ]
+    metadata = data.get("metadata", {})
+    lines.append(f"Remote channel status: {metadata.get('remote_channels_status', '-')}")
+    lines.append(f"Remote channel last checked: {metadata.get('remote_channels_checked_at', '-')}")
+    lines.append(f"Remote channel message: {metadata.get('remote_channels_message', '-')}")
     if validation_errors:
         lines.append("Config validation errors:")
         lines.extend(f"- {error}" for error in validation_errors)

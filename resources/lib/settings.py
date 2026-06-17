@@ -21,10 +21,17 @@ class AddonSettings:
     prefer_tvheadend: bool = False
     tvheadend_mapping_path: str = ""
     generate_m3u_on_startup: bool = False
+    remote_config_enabled: bool = True
+    remote_config_url: str = "https://raw.githubusercontent.com/NirDs22/israeli-live-tv-stable/main/resources/data/channels.json"
+    remote_config_ttl_hours: int = 12
 
     @property
     def health_ttl_seconds(self) -> int:
         return max(1, self.health_check_ttl_minutes) * 60
+
+    @property
+    def remote_config_ttl_seconds(self) -> int:
+        return max(1, self.remote_config_ttl_hours) * 60 * 60
 
 
 def _bool(value: Any) -> bool:
@@ -72,6 +79,10 @@ def get_settings() -> AddonSettings:
             prefer_tvheadend=_bool(addon.getSetting("prefer_tvheadend")),
             tvheadend_mapping_path=addon.getSetting("tvheadend_mapping_path") or "",
             generate_m3u_on_startup=_bool(addon.getSetting("generate_m3u_on_startup")),
+            remote_config_enabled=_bool(addon.getSetting("remote_config_enabled") or "true"),
+            remote_config_url=addon.getSetting("remote_config_url")
+            or "https://raw.githubusercontent.com/NirDs22/israeli-live-tv-stable/main/resources/data/channels.json",
+            remote_config_ttl_hours=_int(addon.getSetting("remote_config_ttl_hours"), 12),
         )
     except Exception:
         return AddonSettings()

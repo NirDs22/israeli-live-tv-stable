@@ -31,7 +31,7 @@ class RegistryTests(unittest.TestCase):
                 ]
             },
         )
-        return RuntimePaths(base, bundled, base / "user_sources.json", base / "tvh.json", base / "cache.json", base / "out.m3u")
+        return RuntimePaths(base, bundled, base / "remote_channels.json", base / "user_sources.json", base / "tvh.json", base / "cache.json", base / "out.m3u")
 
     def test_channel_json_parsing_and_user_source_merge(self):
         with tempfile.TemporaryDirectory() as tmp:

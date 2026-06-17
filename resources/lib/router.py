@@ -12,6 +12,7 @@ from .m3u import generate_m3u
 from .models import FailureCategory, FailureResult, PlayableResult
 from .playback import fail_to_kodi, resolve_to_kodi, show_failure_dialog
 from .registry import channel_status, load_registry
+from .remote_config import update_remote_channels
 from .resolver import SourceResolver
 from .settings import AddonSettings, get_settings
 from .utils import ADDON_NAME
@@ -49,6 +50,8 @@ class Router:
             self.generate_m3u()
         elif action == "health_check":
             self.health_check(params.get("channel_id", ""))
+        elif action == "update_channels":
+            self.update_channels()
         elif action == "source_details":
             self.source_details(params.get("channel_id", ""))
         elif action == "user_source_instructions":
@@ -117,6 +120,7 @@ class Router:
         self._add_directory("Run health check now", self.url(action="health_check"))
         self._add_directory("Clear cache", self.url(action="clear_cache"))
         self._add_directory("Regenerate M3U", self.url(action="generate_m3u"))
+        self._add_directory("Update channel list now", self.url(action="update_channels"))
         self._add_directory("Show user source file path", self.url(action="user_source_instructions"))
         self._end_directory()
 
@@ -144,6 +148,13 @@ class Router:
                     self.cache.set_source_failure(source.id, status)
                     self.cache.set_channel_failure(channel.id, status)
         self._notify(f"Health check completed ({checked} sources)")
+
+    def update_channels(self) -> None:
+        result = update_remote_channels(self.paths, self.settings, self.cache, force=True)
+        if result.validation.errors:
+            self._show_text("Channel update", result.message + "\n\n" + "\n".join(result.validation.errors))
+        else:
+            self._notify("Channel list updated" if result.updated else result.message)
 
     def source_details(self, channel_id: str) -> None:
         channel = self.registry.get(channel_id)

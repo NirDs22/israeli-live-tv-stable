@@ -19,6 +19,13 @@
         <setting id="show_disabled_channels" type="boolean" label="Show disabled channels" default="false"/>
       </group>
     </category>
+    <category id="remote_config" label="Remote Config">
+      <group id="remote_config">
+        <setting id="remote_config_enabled" type="boolean" label="Enable remote channel updates" default="true"/>
+        <setting id="remote_config_url" type="string" label="Remote channels.json URL" default="https://raw.githubusercontent.com/NirDs22/israeli-live-tv-stable/main/resources/data/channels.json"/>
+        <setting id="remote_config_ttl_hours" type="integer" label="Remote update TTL hours" default="12"/>
+      </group>
+    </category>
     <category id="tvheadend" label="TVHeadend">
       <group id="tvheadend">
         <setting id="tvheadend_enabled" type="boolean" label="Enable TVHeadend" default="false"/>
