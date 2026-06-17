@@ -66,6 +66,20 @@
       "enabled": true,
       "sources": [
         {
+          "id": "keshet12_candidate_akamai_hls",
+          "type": "DIRECT_HLS",
+          "priority": 30,
+          "enabled": true,
+          "url": "https://keshethlslive-lh.akamaihd.net/i/12live_1@195589/master.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://www.mako.co.il/news-channel2/Channel-2-Newscast-q3_2019/Article-3bf5c3a8e967f51006.htm",
+          "last_verified_at": "2026-06-17",
+          "notes": "Best-effort public Channel 12 candidate. The official page confirms live viewing, but this direct HLS endpoint may be unstable or blocked by Akamai/Kodi."
+        },
+        {
           "id": "keshet12_tvheadend_placeholder",
           "type": "LOCAL_TVHEADEND",
           "priority": 20,
