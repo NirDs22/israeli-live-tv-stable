@@ -1,31 +1,6 @@
 {
   "channels": [
     {
-      "id": "dev_sample",
-      "name": "Development Test Stream",
-      "description": "Safe public sample stream for verifying Kodi playback during development. Not an Israeli broadcaster.",
-      "category": "Development",
-      "logo": "",
-      "tvg_id": "dev_sample",
-      "enabled": true,
-      "sources": [
-        {
-          "id": "dev_sample_public_hls",
-          "type": "DIRECT_HLS",
-          "priority": 10,
-          "enabled": true,
-          "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-          "headers": {},
-          "mime_type": "application/vnd.apple.mpegurl",
-          "requires_inputstream_adaptive": false,
-          "is_user_configured": false,
-          "evidence_url": "https://test-streams.mux.dev/",
-          "last_verified_at": "2026-06-17",
-          "notes": "Public sample HLS stream for development playback tests only."
-        }
-      ]
-    },
-    {
       "id": "kan11",
       "name": "Kan 11",
       "description": "Israeli public broadcaster live channel.",
@@ -47,6 +22,21 @@
           "evidence_url": "https://www.kan.org.il/live/",
           "last_verified_at": "2026-06-17",
           "notes": "Public Kan 11 HLS candidate. Verified reachable from Israel on 2026-06-17; CDN may be Israel-only."
+        },
+        {
+          "id": "kan11_public_dash_fallback",
+          "type": "DIRECT_DASH",
+          "priority": 30,
+          "enabled": true,
+          "url": "https://r.il.cdn-redge.media/livedash/oil/kancdn-live/live/kan11/live.livx?dvr=14400000",
+          "headers": {},
+          "mime_type": "application/dash+xml",
+          "inputstream_type": "mpd",
+          "requires_inputstream_adaptive": true,
+          "is_user_configured": false,
+          "evidence_url": "https://www.kan.org.il/live/",
+          "last_verified_at": "2026-06-17",
+          "notes": "DASH fallback for Kan 11. Requires inputstream.adaptive. Verified reachable from Israel on 2026-06-17; CDN may be Israel-only."
         },
         {
           "id": "kan11_tvheadend_placeholder",
@@ -135,6 +125,34 @@
           "notes": "Public Reshet 13 HLS candidate. Verified reachable on 2026-06-17; may change without notice."
         },
         {
+          "id": "reshet13_public_hls_fallback_2",
+          "type": "DIRECT_HLS",
+          "priority": 40,
+          "enabled": true,
+          "url": "https://d2xg1g9o5vns8m.cloudfront.net/out/v1/0855d703f7d5436fae6a9c7ce8ca5075/index.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://13tv.co.il/live/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Second fallback Reshet 13 HLS candidate. Verified reachable on 2026-06-17."
+        },
+        {
+          "id": "reshet13_public_hls_fallback_1",
+          "type": "DIRECT_HLS",
+          "priority": 30,
+          "enabled": true,
+          "url": "https://d18b0e6mopany4.cloudfront.net/out/v1/2f2bc414a3db4698a8e94b89eaf2da2a/index.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://13tv.co.il/live/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Fallback Reshet 13 HLS candidate. Verified reachable on 2026-06-17."
+        },
+        {
           "id": "reshet13_tvheadend_placeholder",
           "type": "LOCAL_TVHEADEND",
           "priority": 20,
@@ -174,6 +192,20 @@
           "evidence_url": "https://www.now14.co.il/",
           "last_verified_at": "2026-06-17",
           "notes": "Public Now 14 HLS candidate. Verified reachable on 2026-06-17."
+        },
+        {
+          "id": "now14_public_hls_fallback_redge",
+          "type": "DIRECT_HLS",
+          "priority": 30,
+          "enabled": true,
+          "url": "https://r.il.cdn-redge.media/livehls/oil/ch14/live/ch14/live.livx/playlist.m3u8?dvr=21600000&bitrate=5692000&audioId=1&videoId=0",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://www.now14.co.il/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Fallback Now 14 Redge HLS candidate. Verified reachable on 2026-06-17."
         },
         {
           "id": "now14_tvheadend_placeholder",
@@ -217,6 +249,21 @@
           "notes": "Public Kan Educational HLS candidate. Verified reachable from Israel on 2026-06-17; CDN may be Israel-only."
         },
         {
+          "id": "kan_educational_public_dash_fallback",
+          "type": "DIRECT_DASH",
+          "priority": 30,
+          "enabled": true,
+          "url": "https://r.il.cdn-redge.media/livedash/oil/kancdn-live/live/kan_edu/live.livx?dvr=14400000",
+          "headers": {},
+          "mime_type": "application/dash+xml",
+          "inputstream_type": "mpd",
+          "requires_inputstream_adaptive": true,
+          "is_user_configured": false,
+          "evidence_url": "https://www.kan.org.il/live/",
+          "last_verified_at": "2026-06-17",
+          "notes": "DASH fallback for Kan Educational. Requires inputstream.adaptive. Verified reachable on 2026-06-17."
+        },
+        {
           "id": "kan_educational_tvheadend_placeholder",
           "type": "LOCAL_TVHEADEND",
           "priority": 20,
@@ -256,6 +303,21 @@
           "evidence_url": "https://www.kan.org.il/live/",
           "last_verified_at": "2026-06-17",
           "notes": "Public Makan 33 HLS candidate. Verified reachable from Israel on 2026-06-17; CDN may be Israel-only."
+        },
+        {
+          "id": "makan33_public_dash_fallback",
+          "type": "DIRECT_DASH",
+          "priority": 30,
+          "enabled": true,
+          "url": "https://r.il.cdn-redge.media/livedash/oil/kancdn-live/live/makan/live.livx?dvr=14400000",
+          "headers": {},
+          "mime_type": "application/dash+xml",
+          "inputstream_type": "mpd",
+          "requires_inputstream_adaptive": true,
+          "is_user_configured": false,
+          "evidence_url": "https://www.kan.org.il/live/",
+          "last_verified_at": "2026-06-17",
+          "notes": "DASH fallback for Makan 33. Requires inputstream.adaptive. Verified reachable from Israel on 2026-06-17; CDN may be Israel-only."
         },
         {
           "id": "makan33_tvheadend_placeholder",
@@ -318,11 +380,11 @@
     },
     {
       "id": "channel24_or_i24_placeholder",
-      "name": "Channel 24 / i24 Placeholder",
-      "description": "i24 Hebrew live candidate.",
+      "name": "i24NEWS Hebrew",
+      "description": "i24NEWS Hebrew live channel candidate.",
       "category": "Israel",
       "logo": "",
-      "tvg_id": "channel24_or_i24_placeholder",
+      "tvg_id": "i24_hebrew",
       "enabled": true,
       "sources": [
         {
@@ -354,6 +416,139 @@
           "enabled": false,
           "url": "",
           "notes": "No bundled direct playback source is configured in V1."
+        }
+      ]
+    },
+    {
+      "id": "economy10",
+      "name": "Economy 10",
+      "description": "Israeli economy live channel candidate.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "economy10",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "economy10_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://r.il.cdn-redge.media/livehls/oil/calcala-live/live/channel10/live.livx/playlist.m3u8?dvr=21600000",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://www.calcala.tv/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public Economy 10 HLS candidate. Verified reachable from Israel on 2026-06-17; CDN may be Israel-only."
+        },
+        {
+          "id": "economy10_tvheadend_placeholder",
+          "type": "LOCAL_TVHEADEND",
+          "priority": 20,
+          "enabled": true,
+          "url": "",
+          "notes": "Configure local TVHeadend for stable legal playback."
+        }
+      ]
+    },
+    {
+      "id": "ynet_live",
+      "name": "Ynet Live",
+      "description": "Ynet live video stream candidate.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "ynet_live",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "ynet_live_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://ynet-live-01.ynet-pic1.yit.co.il/ynet/live.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://www.ynet.co.il/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public Ynet live HLS candidate. Verified reachable on 2026-06-17."
+        }
+      ]
+    },
+    {
+      "id": "reshet13_comedy",
+      "name": "13 Comedy",
+      "description": "Reshet 13 Hebrew comedy FAST live channel candidate.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "reshet13_comedy",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "reshet13_comedy_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://d15ds134q59udk.cloudfront.net/out/v1/fbba879221d045598540ee783b140fe2/index.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://13tv.co.il/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public Reshet 13 Comedy HLS candidate. Verified reachable on 2026-06-17."
+        }
+      ]
+    },
+    {
+      "id": "reshet13_reality",
+      "name": "13 Reality",
+      "description": "Reshet 13 Hebrew reality FAST live channel candidate.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "reshet13_reality",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "reshet13_reality_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://d2dffl3588mvfk.cloudfront.net/out/v1/d8e15050ca4148aab0ee387a5e2eb46b/index.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://13tv.co.il/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public Reshet 13 Reality HLS candidate. Verified reachable on 2026-06-17."
+        }
+      ]
+    },
+    {
+      "id": "reshet13_vacation",
+      "name": "13 Vacation",
+      "description": "Reshet 13 Hebrew travel/vacation FAST live channel candidate.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "reshet13_vacation",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "reshet13_vacation_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://d1yd8hohnldm33.cloudfront.net/out/v1/19dee23c2cc24f689bd4e1288661ee0c/index.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://13tv.co.il/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public Reshet 13 Vacation HLS candidate. Verified reachable on 2026-06-17."
         }
       ]
     }
