@@ -1,0 +1,17 @@
+{
+  "channels": {
+    "kan11": [
+      {
+        "id": "kan11_user_hls_1",
+        "type": "DIRECT_HLS",
+        "priority": 10,
+        "enabled": true,
+        "url": "https://example.com/user-provided.m3u8",
+        "headers": {},
+        "mime_type": "application/vnd.apple.mpegurl",
+        "requires_inputstream_adaptive": false,
+        "notes": "User-provided legal source"
+      }
+    ]
+  }
+}

@@ -1,0 +1,249 @@
+{
+  "channels": [
+    {
+      "id": "dev_sample",
+      "name": "Development Test Stream",
+      "description": "Safe public sample stream for verifying Kodi playback during development. Not an Israeli broadcaster.",
+      "category": "Development",
+      "logo": "",
+      "tvg_id": "dev_sample",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "dev_sample_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://test-streams.mux.dev/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public sample HLS stream for development playback tests only."
+        }
+      ]
+    },
+    {
+      "id": "kan11",
+      "name": "Kan 11",
+      "description": "Israeli public broadcaster live channel placeholder.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "kan11",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "kan11_tvheadend_placeholder",
+          "type": "LOCAL_TVHEADEND",
+          "priority": 20,
+          "enabled": true,
+          "url": "",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "notes": "Configure a local TVHeadend mapping for Kan 11."
+        },
+        {
+          "id": "kan11_official_info",
+          "type": "OFFICIAL_WEB_PAGE_INFO_ONLY",
+          "priority": 100,
+          "enabled": true,
+          "url": "https://www.kan.org.il/live/",
+          "headers": {},
+          "notes": "Official web page only. Direct playback is not bundled until independently verified."
+        }
+      ]
+    },
+    {
+      "id": "keshet12",
+      "name": "Keshet 12",
+      "description": "Unavailable until a verified legal direct source, user source, or TVHeadend mapping is configured.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "keshet12",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "keshet12_tvheadend_placeholder",
+          "type": "LOCAL_TVHEADEND",
+          "priority": 20,
+          "enabled": true,
+          "url": "",
+          "notes": "Configure local TVHeadend for stable legal playback."
+        },
+        {
+          "id": "keshet12_official_info",
+          "type": "OFFICIAL_WEB_PAGE_INFO_ONLY",
+          "priority": 100,
+          "enabled": true,
+          "url": "https://www.mako.co.il/news-channel2/Channel-2-Newscast-q3_2019/Article-3bf5c3a8e967f51006.htm",
+          "notes": "Official web page only. Direct playback is not bundled because no verified stable legal direct source is configured."
+        }
+      ]
+    },
+    {
+      "id": "reshet13",
+      "name": "Reshet 13",
+      "description": "Unavailable until a verified legal direct source, user source, or TVHeadend mapping is configured.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "reshet13",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "reshet13_tvheadend_placeholder",
+          "type": "LOCAL_TVHEADEND",
+          "priority": 20,
+          "enabled": true,
+          "url": "",
+          "notes": "Configure local TVHeadend for stable legal playback."
+        },
+        {
+          "id": "reshet13_official_info",
+          "type": "OFFICIAL_WEB_PAGE_INFO_ONLY",
+          "priority": 100,
+          "enabled": true,
+          "url": "https://13tv.co.il/live/",
+          "notes": "Official web page only. Direct playback is not bundled until independently verified."
+        }
+      ]
+    },
+    {
+      "id": "now14",
+      "name": "Now 14",
+      "description": "Unavailable until a verified legal direct source, user source, or TVHeadend mapping is configured.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "now14",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "now14_tvheadend_placeholder",
+          "type": "LOCAL_TVHEADEND",
+          "priority": 20,
+          "enabled": true,
+          "url": "",
+          "notes": "Configure local TVHeadend for stable legal playback."
+        },
+        {
+          "id": "now14_official_info",
+          "type": "OFFICIAL_WEB_PAGE_INFO_ONLY",
+          "priority": 100,
+          "enabled": true,
+          "url": "https://www.now14.co.il/",
+          "notes": "Official site only. Direct playback is not bundled until independently verified."
+        }
+      ]
+    },
+    {
+      "id": "kan_educational",
+      "name": "Kan Educational",
+      "description": "Israeli educational channel placeholder.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "kan_educational",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "kan_educational_tvheadend_placeholder",
+          "type": "LOCAL_TVHEADEND",
+          "priority": 20,
+          "enabled": true,
+          "url": "",
+          "notes": "Configure local TVHeadend for stable legal playback."
+        },
+        {
+          "id": "kan_educational_official_info",
+          "type": "OFFICIAL_WEB_PAGE_INFO_ONLY",
+          "priority": 100,
+          "enabled": true,
+          "url": "https://www.kan.org.il/live/",
+          "notes": "Official web page only. Direct playback is not bundled until independently verified."
+        }
+      ]
+    },
+    {
+      "id": "makan33",
+      "name": "Makan 33",
+      "description": "Makan channel placeholder.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "makan33",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "makan33_tvheadend_placeholder",
+          "type": "LOCAL_TVHEADEND",
+          "priority": 20,
+          "enabled": true,
+          "url": "",
+          "notes": "Configure local TVHeadend for stable legal playback."
+        },
+        {
+          "id": "makan33_official_info",
+          "type": "OFFICIAL_WEB_PAGE_INFO_ONLY",
+          "priority": 100,
+          "enabled": true,
+          "url": "https://www.kan.org.il/live/",
+          "notes": "Official web page only. Direct playback is not bundled until independently verified."
+        }
+      ]
+    },
+    {
+      "id": "knesset",
+      "name": "Knesset Channel",
+      "description": "Knesset channel placeholder.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "knesset",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "knesset_tvheadend_placeholder",
+          "type": "LOCAL_TVHEADEND",
+          "priority": 20,
+          "enabled": true,
+          "url": "",
+          "notes": "Configure local TVHeadend for stable legal playback."
+        },
+        {
+          "id": "knesset_official_info",
+          "type": "OFFICIAL_WEB_PAGE_INFO_ONLY",
+          "priority": 100,
+          "enabled": true,
+          "url": "https://main.knesset.gov.il/Activity/Pages/Channel.aspx",
+          "notes": "Official page only. Direct playback is not bundled until independently verified."
+        }
+      ]
+    },
+    {
+      "id": "channel24_or_i24_placeholder",
+      "name": "Channel 24 / i24 Placeholder",
+      "description": "Placeholder for future verified legal direct source or user configuration.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "channel24_or_i24_placeholder",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "channel24_i24_tvheadend_placeholder",
+          "type": "LOCAL_TVHEADEND",
+          "priority": 20,
+          "enabled": true,
+          "url": "",
+          "notes": "Configure local TVHeadend or a user source."
+        },
+        {
+          "id": "channel24_i24_unavailable",
+          "type": "DISABLED",
+          "priority": 200,
+          "enabled": false,
+          "url": "",
+          "notes": "No bundled direct playback source is configured in V1."
+        }
+      ]
+    }
+  ]
+}

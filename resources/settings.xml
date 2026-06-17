@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<settings version="1">
+  <section id="plugin.video.israeli.live.tv.stable">
+    <category id="general" label="General">
+      <group id="general">
+        <setting id="debug_logging" type="boolean" label="Enable debug logging" default="false"/>
+        <setting id="preferred_source_mode" type="string" label="Preferred source mode" default="auto">
+          <constraints>
+            <options>
+              <option label="Auto">auto</option>
+              <option label="Prefer TVHeadend">prefer_tvheadend</option>
+              <option label="Prefer user sources">prefer_user_sources</option>
+              <option label="Prefer bundled sources">prefer_bundled_sources</option>
+            </options>
+          </constraints>
+        </setting>
+        <setting id="network_timeout_seconds" type="integer" label="Network timeout seconds" default="4"/>
+        <setting id="health_check_ttl_minutes" type="integer" label="Health check TTL minutes" default="10"/>
+        <setting id="show_disabled_channels" type="boolean" label="Show disabled channels" default="false"/>
+      </group>
+    </category>
+    <category id="tvheadend" label="TVHeadend">
+      <group id="tvheadend">
+        <setting id="tvheadend_enabled" type="boolean" label="Enable TVHeadend" default="false"/>
+        <setting id="tvheadend_base_url" type="string" label="TVHeadend base URL" default=""/>
+        <setting id="tvheadend_username" type="string" label="TVHeadend username" default=""/>
+        <setting id="tvheadend_password" type="string" label="TVHeadend password" option="hidden" default=""/>
+        <setting id="prefer_tvheadend" type="boolean" label="Prefer TVHeadend" default="false"/>
+        <setting id="tvheadend_mapping_path" type="string" label="Mapping file path" default=""/>
+      </group>
+    </category>
+    <category id="pvr" label="PVR / M3U">
+      <group id="pvr">
+        <setting id="generate_m3u_on_startup" type="boolean" label="Generate M3U on startup" default="false"/>
+      </group>
+    </category>
+  </section>
+</settings>

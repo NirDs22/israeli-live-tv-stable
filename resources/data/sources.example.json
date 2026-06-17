@@ -1,0 +1,16 @@
+{
+  "notes": "Bundled direct sources must be legal, public, stable enough, and backed by official evidence. Prefer user_sources.json for user-owned legal URLs.",
+  "source": {
+    "id": "example_hls",
+    "type": "DIRECT_HLS",
+    "priority": 10,
+    "enabled": true,
+    "url": "https://example.com/legal-public-stream.m3u8",
+    "headers": {},
+    "mime_type": "application/vnd.apple.mpegurl",
+    "requires_inputstream_adaptive": false,
+    "evidence_url": "https://example.com/official-live-page",
+    "last_verified_at": "2026-06-17",
+    "notes": "Only add when verified."
+  }
+}

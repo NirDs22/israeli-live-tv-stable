@@ -1,0 +1,12 @@
+{
+  "channels": {
+    "kan11": {
+      "enabled": true,
+      "url": "http://192.168.1.10:9981/stream/channelid/123"
+    },
+    "keshet12": {
+      "enabled": true,
+      "url": "http://192.168.1.10:9981/stream/channelid/124"
+    }
+  }
+}
