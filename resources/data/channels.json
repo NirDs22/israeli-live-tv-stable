@@ -28,12 +28,26 @@
     {
       "id": "kan11",
       "name": "Kan 11",
-      "description": "Israeli public broadcaster live channel placeholder.",
+      "description": "Israeli public broadcaster live channel.",
       "category": "Israel",
       "logo": "",
       "tvg_id": "kan11",
       "enabled": true,
       "sources": [
+        {
+          "id": "kan11_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://r.il.cdn-redge.media/livehls/oil/kancdn-live/live/kan11/live.livx/playlist.m3u8?dvr=21600000",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://www.kan.org.il/live/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public Kan 11 HLS candidate. Verified reachable from Israel on 2026-06-17; CDN may be Israel-only."
+        },
         {
           "id": "kan11_tvheadend_placeholder",
           "type": "LOCAL_TVHEADEND",
@@ -59,7 +73,7 @@
     {
       "id": "keshet12",
       "name": "Keshet 12",
-      "description": "Unavailable until a verified legal direct source, user source, or TVHeadend mapping is configured.",
+      "description": "Keshet 12 live channel with a best-effort candidate source.",
       "category": "Israel",
       "logo": "",
       "tvg_id": "keshet12",
@@ -68,7 +82,7 @@
         {
           "id": "keshet12_candidate_akamai_hls",
           "type": "DIRECT_HLS",
-          "priority": 30,
+          "priority": 10,
           "enabled": true,
           "url": "https://keshethlslive-lh.akamaihd.net/i/12live_1@195589/master.m3u8",
           "headers": {},
@@ -100,12 +114,26 @@
     {
       "id": "reshet13",
       "name": "Reshet 13",
-      "description": "Unavailable until a verified legal direct source, user source, or TVHeadend mapping is configured.",
+      "description": "Reshet 13 live channel.",
       "category": "Israel",
       "logo": "",
       "tvg_id": "reshet13",
       "enabled": true,
       "sources": [
+        {
+          "id": "reshet13_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://dsk76kvc9kie6.cloudfront.net/media/87f59c77-03f6-4bad-a648-897e095e7360/mainManifest.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://13tv.co.il/live/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public Reshet 13 HLS candidate. Verified reachable on 2026-06-17; may change without notice."
+        },
         {
           "id": "reshet13_tvheadend_placeholder",
           "type": "LOCAL_TVHEADEND",
@@ -127,12 +155,26 @@
     {
       "id": "now14",
       "name": "Now 14",
-      "description": "Unavailable until a verified legal direct source, user source, or TVHeadend mapping is configured.",
+      "description": "Now 14 live channel.",
       "category": "Israel",
       "logo": "",
       "tvg_id": "now14",
       "enabled": true,
       "sources": [
+        {
+          "id": "now14_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://ch14channel14.encoders.immergo.tv/app/2/streamPlaylist.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://www.now14.co.il/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public Now 14 HLS candidate. Verified reachable on 2026-06-17."
+        },
         {
           "id": "now14_tvheadend_placeholder",
           "type": "LOCAL_TVHEADEND",
@@ -154,12 +196,26 @@
     {
       "id": "kan_educational",
       "name": "Kan Educational",
-      "description": "Israeli educational channel placeholder.",
+      "description": "Israeli educational channel.",
       "category": "Israel",
       "logo": "",
       "tvg_id": "kan_educational",
       "enabled": true,
       "sources": [
+        {
+          "id": "kan_educational_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://r.il.cdn-redge.media/livehls/oil/kancdn-live/live/kan_edu/live.livx/playlist.m3u8?dvr=21600000",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://www.kan.org.il/live/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public Kan Educational HLS candidate. Verified reachable from Israel on 2026-06-17; CDN may be Israel-only."
+        },
         {
           "id": "kan_educational_tvheadend_placeholder",
           "type": "LOCAL_TVHEADEND",
@@ -181,12 +237,26 @@
     {
       "id": "makan33",
       "name": "Makan 33",
-      "description": "Makan channel placeholder.",
+      "description": "Makan 33 live channel.",
       "category": "Israel",
       "logo": "",
       "tvg_id": "makan33",
       "enabled": true,
       "sources": [
+        {
+          "id": "makan33_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://r.il.cdn-redge.media/livehls/oil/kancdn-live/live/makan/live.livx/playlist.m3u8?dvr=21600000",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://www.kan.org.il/live/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public Makan 33 HLS candidate. Verified reachable from Israel on 2026-06-17; CDN may be Israel-only."
+        },
         {
           "id": "makan33_tvheadend_placeholder",
           "type": "LOCAL_TVHEADEND",
@@ -208,12 +278,26 @@
     {
       "id": "knesset",
       "name": "Knesset Channel",
-      "description": "Knesset channel placeholder.",
+      "description": "Knesset live channel.",
       "category": "Israel",
       "logo": "",
       "tvg_id": "knesset",
       "enabled": true,
       "sources": [
+        {
+          "id": "knesset_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://kneset.gostreaming.tv/p2-kneset/_definst_/myStream/index.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://main.knesset.gov.il/Activity/Pages/Channel.aspx",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public Knesset HLS candidate. Verified reachable on 2026-06-17."
+        },
         {
           "id": "knesset_tvheadend_placeholder",
           "type": "LOCAL_TVHEADEND",
@@ -235,12 +319,26 @@
     {
       "id": "channel24_or_i24_placeholder",
       "name": "Channel 24 / i24 Placeholder",
-      "description": "Placeholder for future verified legal direct source or user configuration.",
+      "description": "i24 Hebrew live candidate.",
       "category": "Israel",
       "logo": "",
       "tvg_id": "channel24_or_i24_placeholder",
       "enabled": true,
       "sources": [
+        {
+          "id": "i24_hebrew_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://i24newshebrew-cdn.encoders.immergo.tv/master.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://www.i24news.tv/",
+          "last_verified_at": "2026-06-17",
+          "notes": "Public i24 Hebrew HLS candidate. Verified reachable on 2026-06-17."
+        },
         {
           "id": "channel24_i24_tvheadend_placeholder",
           "type": "LOCAL_TVHEADEND",
