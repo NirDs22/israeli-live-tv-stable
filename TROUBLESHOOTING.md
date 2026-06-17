@@ -33,6 +33,25 @@ The M3U includes only playable configured/legal sources. Info-only pages, disabl
 
 Add a legal user source or TVHeadend mapping, then regenerate M3U from Diagnostics.
 
+## Kodi TV Menu Is Empty
+
+Run `Setup Kodi TV` again from the addon. If automatic setup fails, configure `PVR IPTV Simple Client` manually with the generated M3U path.
+
+Also check:
+
+- PVR IPTV Simple Client is installed and enabled.
+- Kodi PVR is enabled.
+- The generated M3U is not empty.
+- Restart Kodi after changing IPTV Simple settings.
+
+## IPTV Simple Not Installed
+
+Install it from Kodi:
+
+`Add-ons -> My add-ons -> PVR clients -> PVR IPTV Simple Client`
+
+Then run `Setup Kodi TV` again.
+
 ## Kodi Freezes Or UI Is Slow
 
 V1 does not perform network calls while opening the main menu or channel list. If Kodi is slow:

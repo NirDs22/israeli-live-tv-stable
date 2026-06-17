@@ -29,6 +29,19 @@ class M3UTests(unittest.TestCase):
             self.assertNotIn("Disabled", text)
             self.assertNotIn("Empty", text)
 
+    def test_m3u_preserves_channel_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = CacheStore(Path(tmp) / "cache.json")
+            resolver = SourceResolver(AddonSettings(), cache)
+            channels = [
+                Channel("one", "One", sources=[Source("one_hls", SourceType.DIRECT_HLS, url="https://example.com/one.m3u8")]),
+                Channel("two", "Two", sources=[Source("two_hls", SourceType.DIRECT_HLS, url="https://example.com/two.m3u8")]),
+            ]
+            out = Path(tmp) / "out.m3u"
+            generate_m3u(channels, resolver, out)
+            text = out.read_text(encoding="utf-8")
+            self.assertLess(text.index("One"), text.index("Two"))
+
 
 if __name__ == "__main__":
     unittest.main()

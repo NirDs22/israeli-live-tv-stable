@@ -13,6 +13,7 @@ The goal is boring stability: open the addon, browse live channels, play a confi
 - Resolves sources with fallback and last-known-good cache.
 - Plays through Kodi resolved URL APIs.
 - Generates a simple M3U file containing only playable configured/legal sources.
+- Can set up Kodi's native TV menu through PVR IPTV Simple Client.
 - Provides Diagnostics for config paths, cache state, source failures, and addon status.
 
 ## What It Does Not Do
@@ -98,6 +99,14 @@ If `Prefer TVHeadend` is enabled, mapped TVHeadend sources are tried before user
 Use Diagnostics > Regenerate M3U. The generated file path appears in Diagnostics.
 
 The M3U excludes disabled sources, info-only pages, missing URLs, and unavailable placeholders.
+
+## Kodi TV Menu
+
+Use `Setup Kodi TV` from the addon main menu. The addon will generate the M3U playlist, try to enable/configure PVR IPTV Simple Client, try to enable Kodi's PVR manager, and show manual instructions if Kodi blocks automatic setup.
+
+After setup, open Kodi `TV -> Channels`.
+
+If automatic setup fails, manually configure PVR IPTV Simple Client with the generated M3U path shown by the addon.
 
 ## Diagnostics
 

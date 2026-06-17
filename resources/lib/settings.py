@@ -14,6 +14,7 @@ class AddonSettings:
     network_timeout_seconds: int = 4
     health_check_ttl_minutes: int = 10
     show_disabled_channels: bool = False
+    show_setup_kodi_tv: bool = True
     tvheadend_enabled: bool = False
     tvheadend_base_url: str = ""
     tvheadend_username: str = ""
@@ -72,6 +73,7 @@ def get_settings() -> AddonSettings:
             network_timeout_seconds=_int(addon.getSetting("network_timeout_seconds"), 4),
             health_check_ttl_minutes=_int(addon.getSetting("health_check_ttl_minutes"), 10),
             show_disabled_channels=_bool(addon.getSetting("show_disabled_channels")),
+            show_setup_kodi_tv=_bool(addon.getSetting("show_setup_kodi_tv") or "true"),
             tvheadend_enabled=_bool(addon.getSetting("tvheadend_enabled")),
             tvheadend_base_url=addon.getSetting("tvheadend_base_url") or "",
             tvheadend_username=addon.getSetting("tvheadend_username") or "",

@@ -11,6 +11,7 @@ from .healthcheck import check_source
 from .m3u import generate_m3u
 from .models import FailureCategory, FailureResult, PlayableResult
 from .playback import fail_to_kodi, resolve_to_kodi, show_failure_dialog
+from .pvr import setup_kodi_tv
 from .registry import channel_status, load_registry
 from .remote_config import update_remote_channels
 from .resolver import SourceResolver
@@ -48,6 +49,8 @@ class Router:
             self.clear_cache()
         elif action == "generate_m3u":
             self.generate_m3u()
+        elif action == "setup_kodi_tv":
+            self.setup_kodi_tv()
         elif action == "health_check":
             self.health_check(params.get("channel_id", ""))
         elif action == "update_channels":
@@ -68,6 +71,8 @@ class Router:
 
     def root(self) -> None:
         self._add_directory("Live Channels", self.url(action="live_channels"))
+        if self.settings.show_setup_kodi_tv:
+            self._add_directory("Setup Kodi TV", self.url(action="setup_kodi_tv"))
         self._add_directory("Diagnostics", self.url(action="diagnostics"))
         self._add_directory("Settings", self.url(action="settings"))
         self._add_directory("About", self.url(action="about"))
@@ -120,6 +125,7 @@ class Router:
         self._add_directory("Run health check now", self.url(action="health_check"))
         self._add_directory("Clear cache", self.url(action="clear_cache"))
         self._add_directory("Regenerate M3U", self.url(action="generate_m3u"))
+        self._add_directory("Setup Kodi TV", self.url(action="setup_kodi_tv"))
         self._add_directory("Update channel list now", self.url(action="update_channels"))
         self._add_directory("Show user source file path", self.url(action="user_source_instructions"))
         self._end_directory()
@@ -132,6 +138,18 @@ class Router:
         resolver = SourceResolver(self.settings, self.cache, validate_network=False)
         count = generate_m3u(self.registry.channels, resolver, self.paths.generated_m3u)
         self._notify(f"Generated M3U with {count} entries")
+
+    def setup_kodi_tv(self) -> None:
+        resolver = SourceResolver(self.settings, self.cache, validate_network=False)
+        count = generate_m3u(self.registry.channels, resolver, self.paths.generated_m3u)
+        result = setup_kodi_tv(self.paths.generated_m3u, count)
+        if result.ok:
+            self._show_text("Setup Kodi TV", result.message + "\n\n" + result.technical_details)
+        else:
+            self._show_text(
+                "Setup Kodi TV",
+                result.message + "\n\n" + result.technical_details + "\n\n" + result.manual_instructions,
+            )
 
     def health_check(self, channel_id: str = "") -> None:
         channels = [self.registry.get(channel_id)] if channel_id else self.registry.channels

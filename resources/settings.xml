@@ -17,6 +17,7 @@
         <setting id="network_timeout_seconds" type="integer" label="Network timeout seconds" default="4"/>
         <setting id="health_check_ttl_minutes" type="integer" label="Health check TTL minutes" default="10"/>
         <setting id="show_disabled_channels" type="boolean" label="Show disabled channels" default="false"/>
+        <setting id="show_setup_kodi_tv" type="boolean" label="Show Setup Kodi TV on main menu" default="true"/>
       </group>
     </category>
     <category id="remote_config" label="Remote Config">
