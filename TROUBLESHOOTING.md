@@ -35,13 +35,12 @@ Add a legal user source or TVHeadend mapping, then regenerate M3U from Diagnosti
 
 ## Kodi TV Menu Is Empty
 
-Run `Setup Kodi TV` again from the addon. If automatic setup fails, configure `PVR IPTV Simple Client` manually with the local playlist URL shown in Diagnostics.
+Run `Setup Kodi TV` again from the addon. It should repair IPTV Simple automatically without you browsing for the hidden M3U file.
 
 Also check:
 
 - PVR IPTV Simple Client is installed and enabled.
 - Kodi PVR is enabled.
-- Diagnostics shows `Local playlist server: running`.
 - The generated M3U is not empty.
 - Restart Kodi after changing IPTV Simple settings.
 

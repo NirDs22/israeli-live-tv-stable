@@ -75,7 +75,7 @@ class Router:
     def root(self) -> None:
         self._add_directory("Live Channels", self.url(action="live_channels"))
         if self.settings.show_setup_kodi_tv:
-            self._add_directory("Setup Kodi TV", self.url(action="setup_kodi_tv"))
+            self._add_directory("Setup / Repair Kodi TV", self.url(action="setup_kodi_tv"))
         self._add_directory("Diagnostics", self.url(action="diagnostics"))
         self._add_directory("Settings", self.url(action="settings"))
         self._add_directory("About", self.url(action="about"))
@@ -129,7 +129,7 @@ class Router:
         self._add_directory("Clear cache", self.url(action="clear_cache"))
         self._add_directory("Regenerate M3U", self.url(action="generate_m3u"))
         self._add_directory("Restart playlist server", self.url(action="restart_playlist_server"))
-        self._add_directory("Setup Kodi TV", self.url(action="setup_kodi_tv"))
+        self._add_directory("Setup / Repair Kodi TV", self.url(action="setup_kodi_tv"))
         self._add_directory("Update channel list now", self.url(action="update_channels"))
         self._add_directory("Show user source file path", self.url(action="user_source_instructions"))
         self._end_directory()
@@ -153,7 +153,7 @@ class Router:
             if server_ok:
                 local_url = playlist_url(self.settings.playlist_server_port)
             else:
-                server_note = f"\n\nLocal playlist URL was not ready, so setup used the local file fallback. Status: {server_status}"
+                server_note = f"\n\nLocal playlist URL is not running. Stable local file mode was still configured automatically. Status: {server_status}"
         result = setup_kodi_tv(self.paths.generated_m3u, count, local_url)
         if result.ok:
             self._show_text("Setup Kodi TV", result.message + "\n\n" + result.technical_details + server_note)

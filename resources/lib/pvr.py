@@ -20,16 +20,19 @@ class PVRSetupResult:
 
 
 def iptv_simple_manual_instructions(m3u_path: str, playlist_url: str = "") -> str:
-    url_step = f"5. Set M3U playlist URL to:\n{playlist_url}\n" if playlist_url else "5. Set M3U playlist path to:\n"
-    path_step = "" if playlist_url else f"{m3u_path}\n"
+    if playlist_url:
+        location = "Remote path (Internet address)"
+        playlist_step = f"5. Set M3U playlist URL to:\n{playlist_url}\n"
+    else:
+        location = "Local path"
+        playlist_step = f"5. Set M3U playlist path to:\n{m3u_path}\n"
     return (
         "Manual Kodi TV setup:\n\n"
         "1. Open Kodi Add-ons -> My add-ons -> PVR clients.\n"
         "2. Install and enable PVR IPTV Simple Client.\n"
         "3. Open PVR IPTV Simple Client settings.\n"
-        f"4. Set Location to {'Remote path (Internet address)' if playlist_url else 'Local path'}.\n"
-        f"{url_step}"
-        f"{path_step}"
+        f"4. Set Location to {location}.\n"
+        f"{playlist_step}"
         "6. Press OK.\n"
         "7. Restart Kodi, or disable and re-enable PVR IPTV Simple Client.\n"
         "8. Open Kodi TV -> Channels."
@@ -138,16 +141,15 @@ def setup_kodi_tv(m3u_path: Path, channel_count: int, playlist_url: str = "") ->
     else:
         steps.append(f"Optional step skipped: {pvr_msg}")
 
+    config_ok, config_msg = configure_iptv_simple(path_text)
+    steps.append(config_msg)
     if playlist_url:
-        config_ok, config_msg = configure_iptv_simple_url(playlist_url)
-        steps.append(config_msg)
         if not config_ok:
-            fallback_ok, fallback_msg = configure_iptv_simple(path_text)
-            steps.append(f"Fallback local file setup: {fallback_msg}")
+            fallback_ok, fallback_msg = configure_iptv_simple_url(playlist_url)
+            steps.append(f"Fallback local URL setup: {fallback_msg}")
             config_ok = fallback_ok
-    else:
-        config_ok, config_msg = configure_iptv_simple(path_text)
-        steps.append(config_msg)
+        else:
+            steps.append("Stable mode: IPTV Simple uses the generated local M3U file; no manual file browsing is needed.")
     reload_ok, reload_msg = reload_pvr()
     steps.append(reload_msg)
 
