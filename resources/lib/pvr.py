@@ -70,7 +70,7 @@ def enable_pvr_manager() -> tuple[bool, str]:
     try:
         response = _json_rpc("Settings.SetSettingValue", {"setting": "pvrmanager.enabled", "value": True})
         if "error" in response:
-            return False, str(response["error"])
+            return False, "Kodi did not allow automatic PVR manager enabling. If TV is missing, enable PVR in Kodi settings."
         return True, "Kodi PVR manager enabled."
     except Exception as exc:
         return False, f"Could not enable Kodi PVR manager: {exc}"
@@ -118,7 +118,10 @@ def setup_kodi_tv(m3u_path: Path, channel_count: int) -> PVRSetupResult:
     enabled_ok, enabled_msg = enable_iptv_simple()
     steps.append(enabled_msg)
     pvr_ok, pvr_msg = enable_pvr_manager()
-    steps.append(pvr_msg)
+    if pvr_ok:
+        steps.append(pvr_msg)
+    else:
+        steps.append(f"Optional step skipped: {pvr_msg}")
     config_ok, config_msg = configure_iptv_simple(path_text)
     steps.append(config_msg)
     reload_ok, reload_msg = reload_pvr()
