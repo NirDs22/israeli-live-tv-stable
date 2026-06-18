@@ -14,6 +14,8 @@ permissions:
 jobs:
   channel-health:
     runs-on: ubuntu-latest
+    env:
+      MAIL_CONFIGURED: ${{ secrets.MAIL_SERVER != '' && secrets.MAIL_PORT != '' && secrets.MAIL_USERNAME != '' && secrets.MAIL_PASSWORD != '' && secrets.MAIL_FROM != '' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -99,3 +101,109 @@ jobs:
           else:
               subprocess.run(["gh", "issue", "create", "--title", title, "--body", body, "--label", "channel-health"], check=True)
           PY
+
+      - name: Prepare email summary
+        if: always() && steps.israel-time.outputs.run_checks == 'true'
+        id: email-summary
+        env:
+          PR_URL: ${{ steps.cpr.outputs.pull-request-url }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          github_output = Path(os.environ["GITHUB_OUTPUT"])
+          report_path = Path("channel-health-report.json")
+          if not report_path.exists():
+              body = (
+                  "The daily channel maintenance workflow did not produce a health report. "
+                  "Check the GitHub Actions run logs for the crash or test failure.\n"
+              )
+              Path("channel-health-email.txt").write_text(body, encoding="utf-8")
+              Path("channel-health-report.md").write_text(body, encoding="utf-8")
+              Path("channel-health-report.json").write_text("{}\n", encoding="utf-8")
+              with github_output.open("a", encoding="utf-8") as handle:
+                  handle.write("should_email=true\n")
+                  handle.write("subject=Israeli Live TV Stable: maintenance workflow problem\n")
+                  handle.write("body<<EMAIL_BODY\n")
+                  handle.write(body)
+                  handle.write("EMAIL_BODY\n")
+              raise SystemExit(0)
+
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          broken = [source for source in report.get("sources", []) if not source.get("ok")]
+          promoted = [channel for channel in report.get("channels", []) if channel.get("fallback_promoted")]
+          candidates = report.get("candidates", [])
+          changed = bool(report.get("changed"))
+          should_email = bool(broken or promoted or candidates or changed)
+
+          lines = [
+              "Daily Israeli Live TV Stable channel maintenance report.",
+              "",
+              f"Checked at: {report.get('checked_at', '-')}",
+              f"Broken sources detected: {len(broken)}",
+              f"Safe metadata changes prepared: {'yes' if changed else 'no'}",
+              "",
+              "What was done:",
+          ]
+          if promoted:
+              for channel in promoted:
+                  lines.append(f"- Promoted a working fallback for {channel.get('channel_name')} ({channel.get('channel_id')}).")
+          if candidates:
+              for candidate in candidates:
+                  lines.append(
+                      f"- Candidate {candidate.get('source_id')} for {candidate.get('channel_id')}: "
+                      f"{candidate.get('status')} - {candidate.get('message')}"
+                  )
+          if broken:
+              lines.append("- Opened or updated a GitHub issue/report for remaining broken sources.")
+          if os.environ.get("PR_URL"):
+              lines.append(f"- Pull request: {os.environ['PR_URL']}")
+          if not promoted and not candidates and not changed and broken:
+              lines.append("- No safe automatic fix was available; replacement search is still needed.")
+          if not should_email:
+              lines.append("- No broken sources or maintenance changes were detected.")
+
+          if broken:
+              lines.extend(["", "Broken sources:"])
+              for source in broken:
+                  lines.append(f"- {source.get('channel_id')} / {source.get('source_id')}: {source.get('status')}")
+
+          body = "\n".join(lines) + "\n"
+          Path("channel-health-email.txt").write_text(body, encoding="utf-8")
+          subject = "Israeli Live TV Stable: break detected" if broken else "Israeli Live TV Stable: maintenance update"
+          with github_output.open("a", encoding="utf-8") as handle:
+              handle.write(f"should_email={'true' if should_email else 'false'}\n")
+              handle.write(f"subject={subject}\n")
+              handle.write("body<<EMAIL_BODY\n")
+              handle.write(body)
+              handle.write("EMAIL_BODY\n")
+          PY
+
+      - name: Email health alert
+        if: always() && env.MAIL_CONFIGURED == 'true' && steps.email-summary.outputs.should_email == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: ${{ steps.email-summary.outputs.subject }}
+          to: nird.daus62@gmail.com
+          from: ${{ secrets.MAIL_FROM }}
+          body: ${{ steps.email-summary.outputs.body }}
+          attachments: channel-health-report.md,channel-health-report.json
+
+      - name: Email workflow crash
+        if: failure() && env.MAIL_CONFIGURED == 'true' && steps.email-summary.outputs.should_email != 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "Israeli Live TV Stable: maintenance workflow failed"
+          to: nird.daus62@gmail.com
+          from: ${{ secrets.MAIL_FROM }}
+          body: "The daily channel maintenance workflow crashed or a required step failed before a normal health email could be prepared. Open the latest GitHub Actions run for details."

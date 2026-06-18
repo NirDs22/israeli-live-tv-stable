@@ -14,6 +14,7 @@ The job:
 - Tests reviewed candidates from `resources/data/channel_candidates.json`.
 - Opens a pull request for safe metadata changes.
 - Opens or updates an issue when broken sources still need investigation.
+- Emails `nird.daus62@gmail.com` when a break/crash is detected or when the job made a safe maintenance change.
 
 ## Replacement Search Policy
 
@@ -62,6 +63,20 @@ Reports are written to:
 
 - `channel-health-report.json`
 - `channel-health-report.md`
+
+## Daily Email Alerts
+
+Email alerts are sent by the GitHub Action only when SMTP secrets are configured in the GitHub repo.
+
+Add these secrets under `Settings > Secrets and variables > Actions > Repository secrets`:
+
+- `MAIL_SERVER`
+- `MAIL_PORT`
+- `MAIL_USERNAME`
+- `MAIL_PASSWORD`
+- `MAIL_FROM`
+
+For Gmail, use an app password rather than your normal account password. The email is sent to `nird.daus62@gmail.com` when a source breaks, a fallback/candidate change is prepared, or the workflow crashes before producing a normal report.
 
 ## Codex Automation
 
