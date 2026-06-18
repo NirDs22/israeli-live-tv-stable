@@ -1,0 +1,399 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import socket
+import sys
+import urllib.error
+import urllib.request
+from copy import deepcopy
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Iterable
+
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from resources.lib.models import FailureCategory, PLAYABLE_SOURCE_TYPES, SourceType, source_from_dict  # noqa: E402
+
+
+CHECKED_SOURCE_TYPES = {SourceType.DIRECT_HLS.value, SourceType.DIRECT_DASH.value}
+NON_BUNDLED_SOURCE_TYPES = {SourceType.LOCAL_M3U.value, SourceType.LOCAL_TVHEADEND.value}
+INFO_SOURCE_TYPES = {SourceType.OFFICIAL_WEB_PAGE_INFO_ONLY.value, SourceType.DISABLED.value}
+DEFAULT_CHANNELS_PATH = ROOT / "resources" / "data" / "channels.json"
+DEFAULT_CANDIDATES_PATH = ROOT / "resources" / "data" / "channel_candidates.json"
+DEFAULT_REPORT_JSON = ROOT / "channel-health-report.json"
+DEFAULT_REPORT_MD = ROOT / "channel-health-report.md"
+
+
+@dataclass
+class SourceCheck:
+    channel_id: str
+    channel_name: str
+    source_id: str
+    source_type: str
+    priority: int
+    url: str
+    ok: bool
+    status: str
+    is_primary: bool = False
+    needs_replacement_search: bool = False
+
+
+@dataclass
+class CandidateResult:
+    channel_id: str
+    source_id: str
+    status: str
+    message: str
+    url: str = ""
+
+
+@dataclass
+class ChannelSummary:
+    channel_id: str
+    channel_name: str
+    primary_source_id: str = ""
+    primary_ok: bool = False
+    working_source_count: int = 0
+    checked_source_count: int = 0
+    broken_source_count: int = 0
+    fallback_promoted: bool = False
+    replacement_search_needed: bool = False
+    all_sources_broken: bool = False
+
+
+@dataclass
+class HealthReport:
+    checked_at: str
+    changed: bool = False
+    channels: list[ChannelSummary] = field(default_factory=list)
+    sources: list[SourceCheck] = field(default_factory=list)
+    candidates: list[CandidateResult] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    if not isinstance(data, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    return data
+
+
+def write_json(path: Path, data: dict[str, Any]) -> None:
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def source_sort_key(source: dict[str, Any]) -> tuple[int, str]:
+    try:
+        priority = int(source.get("priority", 100))
+    except Exception:
+        priority = 100
+    return priority, str(source.get("id", ""))
+
+
+def checked_sources(channel: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_sources = channel.get("sources", [])
+    if not isinstance(raw_sources, list):
+        return []
+    return [
+        source
+        for source in raw_sources
+        if isinstance(source, dict)
+        and source.get("enabled", True)
+        and source.get("type") in CHECKED_SOURCE_TYPES
+        and source.get("url")
+        and not source.get("is_user_configured", False)
+    ]
+
+
+def primary_source(sources: Iterable[dict[str, Any]]) -> dict[str, Any] | None:
+    sorted_sources = sorted(sources, key=source_sort_key)
+    return sorted_sources[0] if sorted_sources else None
+
+
+def check_url(source: dict[str, Any], timeout: int) -> tuple[bool, str]:
+    source_type = str(source.get("type", ""))
+    url = str(source.get("url", ""))
+    if source_type not in CHECKED_SOURCE_TYPES:
+        return False, FailureCategory.SOURCE_DISABLED.value
+    if not url:
+        return False, FailureCategory.SOURCE_NOT_CONFIGURED.value
+
+    headers = source.get("headers") or {}
+    if not isinstance(headers, dict):
+        return False, FailureCategory.INVALID_USER_CONFIG.value
+
+    request = urllib.request.Request(url, method="GET", headers={str(k): str(v) for k, v in headers.items()})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            status = getattr(response, "status", 200)
+            if status == 403:
+                return False, FailureCategory.HTTP_403.value
+            if status == 404:
+                return False, FailureCategory.HTTP_404.value
+            if status >= 500:
+                return False, FailureCategory.HTTP_5XX.value
+            sample = response.read(2048)
+            if source_type == SourceType.DIRECT_HLS.value and b"#EXTM3U" not in sample:
+                return False, FailureCategory.MANIFEST_INVALID.value
+            if source_type == SourceType.DIRECT_DASH.value and b"<MPD" not in sample:
+                return False, FailureCategory.MANIFEST_INVALID.value
+            return True, "ok"
+    except urllib.error.HTTPError as exc:
+        if exc.code == 403:
+            return False, FailureCategory.HTTP_403.value
+        if exc.code == 404:
+            return False, FailureCategory.HTTP_404.value
+        if exc.code >= 500:
+            return False, FailureCategory.HTTP_5XX.value
+        return False, FailureCategory.UNKNOWN_ERROR.value
+    except urllib.error.URLError as exc:
+        reason = getattr(exc, "reason", exc)
+        if isinstance(reason, socket.timeout):
+            return False, FailureCategory.NETWORK_TIMEOUT.value
+        return False, FailureCategory.DNS_ERROR.value
+    except TimeoutError:
+        return False, FailureCategory.NETWORK_TIMEOUT.value
+    except Exception:
+        return False, FailureCategory.UNKNOWN_ERROR.value
+
+
+def validate_candidate(candidate: dict[str, Any]) -> tuple[bool, str]:
+    if not isinstance(candidate, dict):
+        return False, "candidate must be an object"
+    if candidate.get("status", "candidate") == "rejected":
+        return False, str(candidate.get("rejection_reason", "candidate was previously rejected"))
+    if not candidate.get("evidence_url"):
+        return False, "candidate requires evidence_url"
+    if not candidate.get("notes"):
+        return False, "candidate requires notes"
+    try:
+        source = source_from_dict(candidate)
+    except Exception as exc:
+        return False, str(exc)
+    if source.type.value not in CHECKED_SOURCE_TYPES:
+        return False, "candidate must be DIRECT_HLS or DIRECT_DASH"
+    if source.is_user_configured:
+        return False, "candidate must be bundled-source metadata, not user configured"
+    if not source.url:
+        return False, "candidate requires url"
+    return True, "ok"
+
+
+def candidate_exists(channel: dict[str, Any], candidate_id: str) -> bool:
+    sources = channel.get("sources", [])
+    return any(isinstance(source, dict) and source.get("id") == candidate_id for source in sources)
+
+
+def add_candidate_as_fallback(channel: dict[str, Any], candidate: dict[str, Any]) -> None:
+    source = deepcopy(candidate)
+    source.pop("status", None)
+    source.pop("rejection_reason", None)
+    source["enabled"] = bool(source.get("enabled", True))
+    source["priority"] = max(int(source.get("priority", 70)), 70)
+    source["is_user_configured"] = False
+    source["last_verified_at"] = datetime.now(timezone.utc).date().isoformat()
+    channel.setdefault("sources", []).append(source)
+
+
+def promote_best_fallback(channel: dict[str, Any], checks: list[SourceCheck]) -> bool:
+    working = [check for check in checks if check.channel_id == channel.get("id") and check.ok]
+    if not working:
+        return False
+    best = sorted(working, key=lambda item: (item.priority, item.source_id))[0]
+    sources = channel.get("sources", [])
+    if not isinstance(sources, list):
+        return False
+
+    changed = False
+    for source in sources:
+        if not isinstance(source, dict) or source.get("type") not in CHECKED_SOURCE_TYPES:
+            continue
+        if source.get("id") == best.source_id and int(source.get("priority", 100)) != 10:
+            source["priority"] = 10
+            changed = True
+        elif source.get("id") != best.source_id and int(source.get("priority", 100)) <= 10:
+            source["priority"] = 30
+            changed = True
+    return changed
+
+
+def load_candidates(path: Path) -> dict[str, list[dict[str, Any]]]:
+    if not path.exists():
+        return {}
+    data = load_json(path)
+    raw = data.get("channels", {})
+    if not isinstance(raw, dict):
+        raise ValueError("channel_candidates.json must contain an object named channels")
+    candidates: dict[str, list[dict[str, Any]]] = {}
+    for channel_id, items in raw.items():
+        if isinstance(items, list):
+            candidates[str(channel_id)] = [item for item in items if isinstance(item, dict)]
+    return candidates
+
+
+def generate_report_markdown(report: HealthReport) -> str:
+    lines = [
+        "# Channel Health Report",
+        "",
+        f"Checked at: {report.checked_at}",
+        f"Changed files: {'yes' if report.changed else 'no'}",
+        "",
+        "## Channels",
+        "",
+        "| Channel | Primary | Working | Broken | Replacement search |",
+        "| --- | --- | ---: | ---: | --- |",
+    ]
+    for channel in report.channels:
+        search = "yes" if channel.replacement_search_needed else "no"
+        primary = "ok" if channel.primary_ok else "failed"
+        if not channel.primary_source_id:
+            primary = "-"
+        lines.append(
+            f"| {channel.channel_name} (`{channel.channel_id}`) | {channel.primary_source_id or '-'} {primary} | "
+            f"{channel.working_source_count} | {channel.broken_source_count} | {search} |"
+        )
+
+    broken = [source for source in report.sources if not source.ok]
+    if broken:
+        lines.extend(["", "## Broken Sources", ""])
+        for source in broken:
+            lines.append(f"- `{source.channel_id}` / `{source.source_id}`: {source.status}")
+
+    if report.candidates:
+        lines.extend(["", "## Candidate Results", ""])
+        for candidate in report.candidates:
+            lines.append(f"- `{candidate.channel_id}` / `{candidate.source_id}`: {candidate.status} - {candidate.message}")
+
+    if report.notes:
+        lines.extend(["", "## Notes", ""])
+        lines.extend(f"- {note}" for note in report.notes)
+    return "\n".join(lines) + "\n"
+
+
+def run(args: argparse.Namespace) -> int:
+    channels_path = Path(args.channels)
+    candidates_path = Path(args.candidates)
+    payload = load_json(channels_path)
+    channels = payload.get("channels")
+    if not isinstance(channels, list):
+        raise ValueError("channels.json must contain a list named channels")
+
+    candidate_map = load_candidates(candidates_path)
+    report = HealthReport(checked_at=utc_now())
+    changed = False
+
+    for channel in channels:
+        if not isinstance(channel, dict) or not channel.get("enabled", True):
+            continue
+        channel_id = str(channel.get("id", ""))
+        channel_name = str(channel.get("name", channel_id))
+        sources = checked_sources(channel)
+        primary = primary_source(sources)
+        channel_checks: list[SourceCheck] = []
+
+        for source in sorted(sources, key=source_sort_key):
+            ok, status = check_url(source, args.timeout)
+            check = SourceCheck(
+                channel_id=channel_id,
+                channel_name=channel_name,
+                source_id=str(source.get("id", "")),
+                source_type=str(source.get("type", "")),
+                priority=int(source.get("priority", 100)),
+                url=str(source.get("url", "")),
+                ok=ok,
+                status=status,
+                is_primary=bool(primary and source.get("id") == primary.get("id")),
+                needs_replacement_search=not ok,
+            )
+            channel_checks.append(check)
+            report.sources.append(check)
+
+        broken_count = sum(1 for check in channel_checks if not check.ok)
+        working_count = sum(1 for check in channel_checks if check.ok)
+        primary_ok = any(check.is_primary and check.ok for check in channel_checks)
+        replacement_needed = broken_count > 0
+        all_broken = bool(channel_checks) and working_count == 0
+        promoted = False
+
+        if args.apply_fallbacks and primary and not primary_ok and working_count:
+            promoted = promote_best_fallback(channel, channel_checks)
+            changed = changed or promoted
+
+        if args.apply_candidates and replacement_needed:
+            for candidate in candidate_map.get(channel_id, []):
+                candidate_id = str(candidate.get("id", ""))
+                if candidate_exists(channel, candidate_id):
+                    continue
+                valid, message = validate_candidate(candidate)
+                if not valid:
+                    report.candidates.append(CandidateResult(channel_id, candidate_id, "rejected", message, str(candidate.get("url", ""))))
+                    continue
+                ok, status = check_url(candidate, args.timeout)
+                if not ok:
+                    report.candidates.append(CandidateResult(channel_id, candidate_id, "failed_validation", status, str(candidate.get("url", ""))))
+                    continue
+                add_candidate_as_fallback(channel, candidate)
+                changed = True
+                report.candidates.append(CandidateResult(channel_id, candidate_id, "added_as_fallback", "validated and added", str(candidate.get("url", ""))))
+                break
+
+        report.channels.append(
+            ChannelSummary(
+                channel_id=channel_id,
+                channel_name=channel_name,
+                primary_source_id=str(primary.get("id", "")) if primary else "",
+                primary_ok=primary_ok,
+                working_source_count=working_count,
+                checked_source_count=len(channel_checks),
+                broken_source_count=broken_count,
+                fallback_promoted=promoted,
+                replacement_search_needed=replacement_needed,
+                all_sources_broken=all_broken,
+            )
+        )
+
+    report.changed = changed
+    if changed and not args.dry_run:
+        write_json(channels_path, payload)
+
+    report_json = asdict(report)
+    Path(args.report_json).write_text(json.dumps(report_json, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    Path(args.report_markdown).write_text(generate_report_markdown(report), encoding="utf-8")
+
+    broken_sources = [source for source in report.sources if not source.ok]
+    if broken_sources:
+        print(f"{len(broken_sources)} source(s) need replacement search. See {args.report_markdown}.")
+    else:
+        print(f"All checked sources passed. See {args.report_markdown}.")
+    if changed:
+        print("Safe channel metadata changes were prepared.")
+    return 1 if broken_sources and args.fail_on_broken else 0
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Check Israeli Live TV Stable bundled channel links.")
+    parser.add_argument("--channels", default=str(DEFAULT_CHANNELS_PATH))
+    parser.add_argument("--candidates", default=str(DEFAULT_CANDIDATES_PATH))
+    parser.add_argument("--report-json", default=str(DEFAULT_REPORT_JSON))
+    parser.add_argument("--report-markdown", default=str(DEFAULT_REPORT_MD))
+    parser.add_argument("--timeout", type=int, default=6)
+    parser.add_argument("--apply-fallbacks", action="store_true")
+    parser.add_argument("--apply-candidates", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--fail-on-broken", action="store_true")
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    raise SystemExit(run(parse_args()))

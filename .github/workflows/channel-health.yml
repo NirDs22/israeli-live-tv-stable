@@ -1,0 +1,101 @@
+name: Channel health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 22 * * *"
+    - cron: "0 23 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  channel-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Continue only near 01:00 Israel time
+        id: israel-time
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$(TZ=Asia/Jerusalem date +%H)" = "01" ]; then
+            echo "run_checks=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_checks=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run tests
+        if: steps.israel-time.outputs.run_checks == 'true'
+        run: python -m unittest discover -s tests
+
+      - name: Check channels and apply safe fixes
+        if: steps.israel-time.outputs.run_checks == 'true'
+        run: |
+          python tools/check_channels.py \
+            --apply-fallbacks \
+            --apply-candidates \
+            --report-json channel-health-report.json \
+            --report-markdown channel-health-report.md
+
+      - name: Upload health report
+        if: steps.israel-time.outputs.run_checks == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: channel-health-report
+          path: |
+            channel-health-report.json
+            channel-health-report.md
+
+      - name: Create pull request for safe metadata changes
+        if: steps.israel-time.outputs.run_checks == 'true'
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: codex/channel-health-maintenance
+          delete-branch: true
+          title: "Update channel fallbacks from daily health check"
+          commit-message: "Update channel fallbacks from health check"
+          body-path: channel-health-report.md
+          labels: channel-health, automated
+
+      - name: Open issue when broken sources remain
+        if: always() && steps.israel-time.outputs.run_checks == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python tools/check_channels.py \
+            --dry-run \
+            --report-json channel-health-report.json \
+            --report-markdown channel-health-report.md || true
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          report = json.loads(Path("channel-health-report.json").read_text(encoding="utf-8"))
+          broken = [source for source in report.get("sources", []) if not source.get("ok")]
+          if not broken:
+              raise SystemExit(0)
+
+          title = "Daily channel health: replacement search needed"
+          body = Path("channel-health-report.md").read_text(encoding="utf-8")
+          existing = subprocess.run(
+              ["gh", "issue", "list", "--state", "open", "--label", "channel-health", "--search", title, "--json", "number", "--jq", ".[0].number"],
+              text=True,
+              capture_output=True,
+              check=False,
+          ).stdout.strip()
+          if existing:
+              subprocess.run(["gh", "issue", "comment", existing, "--body", body], check=True)
+          else:
+              subprocess.run(["gh", "issue", "create", "--title", title, "--body", body, "--label", "channel-health"], check=True)
+          PY

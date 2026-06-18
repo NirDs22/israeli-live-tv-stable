@@ -100,6 +100,12 @@ Use Diagnostics > Regenerate M3U. The generated file path appears in Diagnostics
 
 The M3U excludes disabled sources, info-only pages, missing URLs, and unavailable placeholders.
 
+## Daily Link Maintenance
+
+This repo includes a daily GitHub Actions health check and a Codex maintenance automation plan. The checker tests bundled HLS/DASH links, promotes working fallbacks when a primary breaks, and searches for replacement candidates whenever any source breaks so the addon does not slowly run out of links.
+
+See [MAINTENANCE.md](MAINTENANCE.md) for the rules and commands.
+
 ## Kodi TV Menu
 
 Use `Setup Kodi TV` from the addon main menu. The addon will generate the M3U playlist, try to enable/configure PVR IPTV Simple Client, try to enable Kodi's PVR manager, and show manual instructions if Kodi blocks automatic setup.

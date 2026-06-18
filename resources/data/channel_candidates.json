@@ -1,0 +1,23 @@
+{
+  "notes": [
+    "Reviewed replacement candidates for the daily maintenance job.",
+    "Do not add piracy playlists, paid TV links, protected API links, tokenized links, fake headers, cookies, DRM bypasses, or private app endpoints.",
+    "Candidates must include evidence_url and notes before tools/check_channels.py can add them as lower-priority fallbacks."
+  ],
+  "channels": {
+    "kan11": [],
+    "keshet12": [],
+    "reshet13": [],
+    "now14": [],
+    "kan_educational": [],
+    "makan33": [],
+    "knesset": [],
+    "i24_hebrew": [],
+    "economy10": [],
+    "ynet_live": [],
+    "reshet_13_comedy": [],
+    "reshet_13_reality": [],
+    "reshet_13_vacation": []
+  },
+  "rejected": []
+}
