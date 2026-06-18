@@ -11,6 +11,7 @@ from .healthcheck import check_source
 from .m3u import generate_m3u
 from .models import FailureCategory, FailureResult, PlayableResult
 from .playback import fail_to_kodi, resolve_to_kodi, show_failure_dialog
+from .playlist_server import playlist_server_status, playlist_url
 from .pvr import setup_kodi_tv
 from .registry import channel_status, load_registry
 from .remote_config import update_remote_channels
@@ -51,6 +52,8 @@ class Router:
             self.generate_m3u()
         elif action == "setup_kodi_tv":
             self.setup_kodi_tv()
+        elif action == "restart_playlist_server":
+            self.restart_playlist_server()
         elif action == "health_check":
             self.health_check(params.get("channel_id", ""))
         elif action == "update_channels":
@@ -125,6 +128,7 @@ class Router:
         self._add_directory("Run health check now", self.url(action="health_check"))
         self._add_directory("Clear cache", self.url(action="clear_cache"))
         self._add_directory("Regenerate M3U", self.url(action="generate_m3u"))
+        self._add_directory("Restart playlist server", self.url(action="restart_playlist_server"))
         self._add_directory("Setup Kodi TV", self.url(action="setup_kodi_tv"))
         self._add_directory("Update channel list now", self.url(action="update_channels"))
         self._add_directory("Show user source file path", self.url(action="user_source_instructions"))
@@ -142,13 +146,40 @@ class Router:
     def setup_kodi_tv(self) -> None:
         resolver = SourceResolver(self.settings, self.cache, validate_network=False)
         count = generate_m3u(self.registry.channels, resolver, self.paths.generated_m3u)
-        result = setup_kodi_tv(self.paths.generated_m3u, count)
+        local_url = ""
+        server_note = ""
+        if self.settings.playlist_server_enabled:
+            server_ok, server_status = playlist_server_status(self.settings.playlist_server_port)
+            if server_ok:
+                local_url = playlist_url(self.settings.playlist_server_port)
+            else:
+                server_note = f"\n\nLocal playlist URL was not ready, so setup used the local file fallback. Status: {server_status}"
+        result = setup_kodi_tv(self.paths.generated_m3u, count, local_url)
         if result.ok:
-            self._show_text("Setup Kodi TV", result.message + "\n\n" + result.technical_details)
+            self._show_text("Setup Kodi TV", result.message + "\n\n" + result.technical_details + server_note)
         else:
             self._show_text(
                 "Setup Kodi TV",
-                result.message + "\n\n" + result.technical_details + "\n\n" + result.manual_instructions,
+                result.message + "\n\n" + result.technical_details + server_note + "\n\n" + result.manual_instructions,
+            )
+
+    def restart_playlist_server(self) -> None:
+        try:
+            import xbmc  # type: ignore
+
+            xbmc.executebuiltin("StopScript(resources/lib/service.py)")
+            xbmc.executebuiltin("RunScript(resources/lib/service.py)")
+        except Exception:
+            pass
+        ok, status = playlist_server_status(self.settings.playlist_server_port)
+        if ok:
+            self._notify("Playlist server is running")
+        else:
+            self._show_text(
+                "Playlist server",
+                "Playlist server was requested. If it is still not running, restart Kodi.\n\n"
+                f"Status: {status}\n"
+                f"URL: {playlist_url(self.settings.playlist_server_port)}",
             )
 
     def health_check(self, channel_id: str = "") -> None:

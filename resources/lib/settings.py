@@ -22,6 +22,8 @@ class AddonSettings:
     prefer_tvheadend: bool = False
     tvheadend_mapping_path: str = ""
     generate_m3u_on_startup: bool = False
+    playlist_server_enabled: bool = True
+    playlist_server_port: int = 41555
     remote_config_enabled: bool = True
     remote_config_url: str = "https://raw.githubusercontent.com/NirDs22/israeli-live-tv-stable/main/resources/data/channels.json"
     remote_config_ttl_hours: int = 12
@@ -81,6 +83,8 @@ def get_settings() -> AddonSettings:
             prefer_tvheadend=_bool(addon.getSetting("prefer_tvheadend")),
             tvheadend_mapping_path=addon.getSetting("tvheadend_mapping_path") or "",
             generate_m3u_on_startup=_bool(addon.getSetting("generate_m3u_on_startup")),
+            playlist_server_enabled=_bool(addon.getSetting("playlist_server_enabled") or "true"),
+            playlist_server_port=_int(addon.getSetting("playlist_server_port"), 41555),
             remote_config_enabled=_bool(addon.getSetting("remote_config_enabled") or "true"),
             remote_config_url=addon.getSetting("remote_config_url")
             or "https://raw.githubusercontent.com/NirDs22/israeli-live-tv-stable/main/resources/data/channels.json",

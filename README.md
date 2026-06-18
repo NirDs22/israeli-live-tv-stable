@@ -96,7 +96,7 @@ If `Prefer TVHeadend` is enabled, mapped TVHeadend sources are tried before user
 
 ## M3U
 
-Use Diagnostics > Regenerate M3U. The generated file path appears in Diagnostics.
+Use Diagnostics > Regenerate M3U. The addon also exposes the playlist through a local-only URL for IPTV Simple Client.
 
 The M3U excludes disabled sources, info-only pages, missing URLs, and unavailable placeholders.
 
@@ -108,11 +108,11 @@ See [MAINTENANCE.md](MAINTENANCE.md) for the rules and commands.
 
 ## Kodi TV Menu
 
-Use `Setup Kodi TV` from the addon main menu. The addon will generate the M3U playlist, try to enable/configure PVR IPTV Simple Client, try to enable Kodi's PVR manager, and show manual instructions if Kodi blocks automatic setup.
+Use `Setup Kodi TV` from the addon main menu. The addon will generate the M3U playlist, serve it at a local-only URL, try to configure PVR IPTV Simple Client with that URL, try to enable Kodi's PVR manager, and show manual instructions if Kodi blocks automatic setup.
 
 After setup, open Kodi `TV -> Channels`.
 
-If automatic setup fails, manually configure PVR IPTV Simple Client with the generated M3U path shown by the addon.
+If automatic setup fails, manually configure PVR IPTV Simple Client with the local playlist URL shown in Diagnostics. The generated M3U file path is still shown as a fallback/debug detail.
 
 ## Diagnostics
 
@@ -121,6 +121,7 @@ Diagnostics shows:
 - Kodi, Python, platform, and addon version.
 - Addon userdata path.
 - User source and TVHeadend mapping paths.
+- Local playlist URL and local playlist server status.
 - inputstream.adaptive and IPTV Simple detection.
 - Cache status.
 - Last known good source and failures.

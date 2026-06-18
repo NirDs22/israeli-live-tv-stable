@@ -478,6 +478,47 @@
       ]
     },
     {
+      "id": "hidabroot",
+      "name": "Hidabroot",
+      "description": "Hidabroot Hebrew live channel.",
+      "category": "Israel",
+      "logo": "",
+      "tvg_id": "hidabroot",
+      "enabled": true,
+      "sources": [
+        {
+          "id": "hidabroot_public_hls",
+          "type": "DIRECT_HLS",
+          "priority": 10,
+          "enabled": true,
+          "url": "https://htv-live.cybercdn.live/HidabrootIL/Live97/playlist.m3u8",
+          "headers": {},
+          "mime_type": "application/vnd.apple.mpegurl",
+          "requires_inputstream_adaptive": false,
+          "is_user_configured": false,
+          "evidence_url": "https://www.hidabroot.org/live",
+          "last_verified_at": "2026-06-18",
+          "notes": "Public Hidabroot HLS from the official live page. Verified reachable on 2026-06-18."
+        },
+        {
+          "id": "hidabroot_tvheadend_placeholder",
+          "type": "LOCAL_TVHEADEND",
+          "priority": 20,
+          "enabled": true,
+          "url": "",
+          "notes": "Configure local TVHeadend for stable legal playback."
+        },
+        {
+          "id": "hidabroot_official_info",
+          "type": "OFFICIAL_WEB_PAGE_INFO_ONLY",
+          "priority": 100,
+          "enabled": true,
+          "url": "https://www.hidabroot.org/live",
+          "notes": "Official Hidabroot live page."
+        }
+      ]
+    },
+    {
       "id": "reshet13_comedy",
       "name": "13 Comedy",
       "description": "Reshet 13 Hebrew comedy FAST live channel candidate.",

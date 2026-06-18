@@ -40,6 +40,8 @@
     <category id="pvr" label="PVR / M3U">
       <group id="pvr">
         <setting id="generate_m3u_on_startup" type="boolean" label="Generate M3U on startup" default="false"/>
+        <setting id="playlist_server_enabled" type="boolean" label="Enable local playlist URL server" default="true"/>
+        <setting id="playlist_server_port" type="integer" label="Local playlist URL port" default="41555"/>
       </group>
     </category>
   </section>

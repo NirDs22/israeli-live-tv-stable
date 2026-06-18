@@ -8,6 +8,7 @@ from typing import Dict, List
 from .cache import CacheStore
 from .config import RuntimePaths
 from .models import Channel
+from .playlist_server import playlist_server_status, playlist_url
 from .settings import AddonSettings
 
 
@@ -73,6 +74,8 @@ def build_diagnostics(
         f"tvheadend_mapping.json path: {paths.tvheadend_mapping}",
         f"remote_channels.json path: {paths.remote_channels}",
         f"Generated M3U path: {paths.generated_m3u}",
+        f"Local playlist URL: {playlist_url(settings.playlist_server_port)}",
+        f"Local playlist server: {playlist_server_status(settings.playlist_server_port)[1] if settings.playlist_server_enabled else 'disabled'}",
         f"inputstream.adaptive: {addon_enabled('inputstream.adaptive')}",
         f"IPTV Simple Client: {addon_enabled('pvr.iptvsimple')}",
         f"Channels loaded: {len(channels)}",

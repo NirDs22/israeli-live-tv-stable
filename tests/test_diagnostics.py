@@ -21,6 +21,8 @@ class DiagnosticsTests(unittest.TestCase):
             self.assertIn("User sources loaded: 2", text)
             self.assertIn("bad config", text)
             self.assertIn("Remote channel updates enabled:", text)
+            self.assertIn("Local playlist URL:", text)
+            self.assertIn("Local playlist server:", text)
 
 
 if __name__ == "__main__":

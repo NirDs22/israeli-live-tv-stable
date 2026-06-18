@@ -19,15 +19,17 @@ class PVRSetupResult:
     manual_instructions: str = ""
 
 
-def iptv_simple_manual_instructions(m3u_path: str) -> str:
+def iptv_simple_manual_instructions(m3u_path: str, playlist_url: str = "") -> str:
+    url_step = f"5. Set M3U playlist URL to:\n{playlist_url}\n" if playlist_url else "5. Set M3U playlist path to:\n"
+    path_step = "" if playlist_url else f"{m3u_path}\n"
     return (
         "Manual Kodi TV setup:\n\n"
         "1. Open Kodi Add-ons -> My add-ons -> PVR clients.\n"
         "2. Install and enable PVR IPTV Simple Client.\n"
         "3. Open PVR IPTV Simple Client settings.\n"
-        "4. Set Location to Local path.\n"
-        "5. Set M3U playlist path to:\n"
-        f"{m3u_path}\n"
+        f"4. Set Location to {'Remote path (Internet address)' if playlist_url else 'Local path'}.\n"
+        f"{url_step}"
+        f"{path_step}"
         "6. Press OK.\n"
         "7. Restart Kodi, or disable and re-enable PVR IPTV Simple Client.\n"
         "8. Open Kodi TV -> Channels."
@@ -89,6 +91,19 @@ def configure_iptv_simple(m3u_path: str) -> tuple[bool, str]:
         return False, f"Could not configure PVR IPTV Simple Client: {exc}"
 
 
+def configure_iptv_simple_url(playlist_url: str) -> tuple[bool, str]:
+    try:
+        import xbmcaddon  # type: ignore
+
+        addon = xbmcaddon.Addon(id=IPTV_SIMPLE_ID)
+        addon.setSetting("m3uPathType", "1")
+        addon.setSetting("m3uUrl", playlist_url)
+        addon.setSetting("startNum", "1")
+        return True, f"PVR IPTV Simple Client configured with local playlist URL: {playlist_url}"
+    except Exception as exc:
+        return False, f"Could not configure PVR IPTV Simple Client URL: {exc}"
+
+
 def reload_pvr() -> tuple[bool, str]:
     try:
         import xbmc  # type: ignore
@@ -100,9 +115,9 @@ def reload_pvr() -> tuple[bool, str]:
         return False, f"Could not request PVR reload: {exc}"
 
 
-def setup_kodi_tv(m3u_path: Path, channel_count: int) -> PVRSetupResult:
+def setup_kodi_tv(m3u_path: Path, channel_count: int, playlist_url: str = "") -> PVRSetupResult:
     path_text = str(m3u_path)
-    manual = iptv_simple_manual_instructions(path_text)
+    manual = iptv_simple_manual_instructions(path_text, playlist_url)
     installed, status = iptv_simple_status()
     if not installed:
         return PVRSetupResult(
@@ -122,14 +137,23 @@ def setup_kodi_tv(m3u_path: Path, channel_count: int) -> PVRSetupResult:
         steps.append(pvr_msg)
     else:
         steps.append(f"Optional step skipped: {pvr_msg}")
-    config_ok, config_msg = configure_iptv_simple(path_text)
-    steps.append(config_msg)
+
+    if playlist_url:
+        config_ok, config_msg = configure_iptv_simple_url(playlist_url)
+        steps.append(config_msg)
+        if not config_ok:
+            fallback_ok, fallback_msg = configure_iptv_simple(path_text)
+            steps.append(f"Fallback local file setup: {fallback_msg}")
+            config_ok = fallback_ok
+    else:
+        config_ok, config_msg = configure_iptv_simple(path_text)
+        steps.append(config_msg)
     reload_ok, reload_msg = reload_pvr()
     steps.append(reload_msg)
 
     ok = config_ok
     message = (
-        f"Kodi TV setup completed with {channel_count} channels. Open Kodi TV -> Channels."
+        f"Kodi TV is ready with {channel_count} channels. Open TV -> Channels."
         if ok
         else "Kodi TV setup could not be completed automatically."
     )

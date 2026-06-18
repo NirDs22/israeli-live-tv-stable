@@ -40,7 +40,7 @@ Diagnostics shows the exact paths Kodi is using.
 1. Install this addon ZIP.
 2. Open `Israeli Live TV Stable`.
 3. Choose `Setup Kodi TV`.
-4. If Kodi allows it, the addon will configure `PVR IPTV Simple Client`.
+4. If Kodi allows it, the addon will configure `PVR IPTV Simple Client` with the addon's local playlist URL.
 5. Open Kodi `TV -> Channels`.
 
 If automatic setup fails:
@@ -48,10 +48,12 @@ If automatic setup fails:
 1. Open Kodi `Add-ons -> My add-ons -> PVR clients`.
 2. Install and enable `PVR IPTV Simple Client`.
 3. Open its settings.
-4. Set `Location` to `Local path`.
-5. Set `M3U playlist path` to the path shown by `Setup Kodi TV` or Diagnostics.
+4. Set `Location` to `Remote path (Internet address)`.
+5. Set `M3U playlist URL` to the local playlist URL shown in Diagnostics, usually `http://127.0.0.1:41555/playlist.m3u`.
 6. Restart Kodi, or disable and re-enable IPTV Simple.
 7. Open Kodi `TV -> Channels`.
+
+Use the generated M3U file path only as a fallback if the local playlist URL is not running.
 
 ## Debug Logging
 
