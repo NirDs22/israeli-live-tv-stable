@@ -155,6 +155,7 @@ class Router:
             else:
                 server_note = f"\n\nLocal playlist URL is not running. Stable local file mode was still configured automatically. Status: {server_status}"
         result = setup_kodi_tv(self.paths.generated_m3u, count, local_url)
+        self.cache.set_pvr_setup_status(result.setup_mode, result.message)
         if result.ok:
             self._show_text("Setup Kodi TV", result.message + "\n\n" + result.technical_details + server_note)
         else:

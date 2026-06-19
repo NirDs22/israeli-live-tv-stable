@@ -23,6 +23,8 @@ class DiagnosticsTests(unittest.TestCase):
             self.assertIn("Remote channel updates enabled:", text)
             self.assertIn("Local playlist URL:", text)
             self.assertIn("Local playlist server:", text)
+            self.assertIn("IPTV Simple setup mode:", text)
+            self.assertIn("Generated M3U exists:", text)
 
 
 if __name__ == "__main__":

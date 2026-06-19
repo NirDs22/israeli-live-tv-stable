@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree
 
 
 IPTV_SIMPLE_ID = "pvr.iptvsimple"
@@ -17,6 +19,16 @@ class PVRSetupResult:
     message: str = ""
     technical_details: str = ""
     manual_instructions: str = ""
+    setup_mode: str = "unknown"
+
+
+@dataclass
+class InstanceRepairResult:
+    ok: bool
+    mode: str
+    message: str
+    path: str = ""
+    backup_path: str = ""
 
 
 def iptv_simple_manual_instructions(m3u_path: str, playlist_url: str = "") -> str:
@@ -71,6 +83,17 @@ def enable_iptv_simple() -> tuple[bool, str]:
         return False, f"Could not enable PVR IPTV Simple Client: {exc}"
 
 
+def restart_iptv_simple_client() -> tuple[bool, str]:
+    try:
+        disable_response = _json_rpc("Addons.SetAddonEnabled", {"addonid": IPTV_SIMPLE_ID, "enabled": False})
+        enable_response = _json_rpc("Addons.SetAddonEnabled", {"addonid": IPTV_SIMPLE_ID, "enabled": True})
+        if "error" in disable_response or "error" in enable_response:
+            return False, "Could not restart PVR IPTV Simple Client automatically."
+        return True, "PVR IPTV Simple Client restarted."
+    except Exception as exc:
+        return False, f"Could not restart PVR IPTV Simple Client: {exc}"
+
+
 def enable_pvr_manager() -> tuple[bool, str]:
     try:
         response = _json_rpc("Settings.SetSettingValue", {"setting": "pvrmanager.enabled", "value": True})
@@ -92,6 +115,110 @@ def configure_iptv_simple(m3u_path: str) -> tuple[bool, str]:
         return True, "PVR IPTV Simple Client configured with generated M3U."
     except Exception as exc:
         return False, f"Could not configure PVR IPTV Simple Client: {exc}"
+
+
+def verify_iptv_simple_local_file(m3u_path: str) -> tuple[bool, str]:
+    try:
+        import xbmcaddon  # type: ignore
+
+        addon = xbmcaddon.Addon(id=IPTV_SIMPLE_ID)
+        path_type = addon.getSetting("m3uPathType")
+        configured_path = addon.getSetting("m3uPath")
+        if path_type == "0" and configured_path == m3u_path:
+            return True, "IPTV Simple local M3U settings verified."
+        return False, "IPTV Simple settings did not reflect the generated M3U path."
+    except Exception as exc:
+        return False, f"Could not verify IPTV Simple settings: {exc}"
+
+
+def iptv_simple_profile_dir() -> tuple[Path | None, str]:
+    try:
+        import xbmcaddon  # type: ignore
+        import xbmcvfs  # type: ignore
+
+        raw_path = xbmcaddon.Addon(id=IPTV_SIMPLE_ID).getAddonInfo("profile")
+        translated = xbmcvfs.translatePath(raw_path)
+        return Path(translated), "ok"
+    except Exception as exc:
+        return None, f"Could not locate IPTV Simple profile directory: {exc}"
+
+
+def _find_instance_settings(profile_dir: Path) -> Path | None:
+    files = sorted(profile_dir.glob("instance-settings-*.xml"), key=lambda item: item.stat().st_mtime, reverse=True)
+    if files:
+        return files[0]
+    candidate = profile_dir / "instance-settings-1.xml"
+    if profile_dir.exists():
+        candidate.write_text("<settings version=\"2\">\n</settings>\n", encoding="utf-8")
+        return candidate
+    return None
+
+
+def _setting_value(element: ElementTree.Element) -> str:
+    if "value" in element.attrib:
+        return element.attrib.get("value", "")
+    return element.text or ""
+
+
+def _set_setting_value(root: ElementTree.Element, setting_id: str, value: str) -> bool:
+    for element in root.iter("setting"):
+        if element.attrib.get("id") == setting_id:
+            if "value" in element.attrib:
+                element.set("value", value)
+            else:
+                element.text = value
+            return True
+    setting = ElementTree.SubElement(root, "setting")
+    setting.set("id", setting_id)
+    setting.set("value", value)
+    return True
+
+
+def _has_known_settings_shape(root: ElementTree.Element) -> bool:
+    if root.tag != "settings":
+        return False
+    for element in root.iter("setting"):
+        if "id" in element.attrib:
+            return True
+    return len(root) == 0
+
+
+def repair_iptv_simple_instance_settings(m3u_path: str, profile_dir: Path | None = None) -> InstanceRepairResult:
+    if profile_dir is None:
+        profile_dir, message = iptv_simple_profile_dir()
+        if profile_dir is None:
+            return InstanceRepairResult(False, "manual fallback", message)
+
+    if not profile_dir.exists() or not profile_dir.is_dir():
+        return InstanceRepairResult(False, "manual fallback", "IPTV Simple profile directory does not exist.")
+
+    try:
+        settings_path = _find_instance_settings(profile_dir)
+        if not settings_path:
+            return InstanceRepairResult(False, "manual fallback", "Could not find or create IPTV Simple instance settings.")
+        tree = ElementTree.parse(settings_path)
+        root = tree.getroot()
+        if not _has_known_settings_shape(root):
+            return InstanceRepairResult(False, "manual fallback", "IPTV Simple instance settings format is unknown.", str(settings_path))
+
+        backup_path = settings_path.with_suffix(settings_path.suffix + ".bak")
+        shutil.copy2(settings_path, backup_path)
+
+        _set_setting_value(root, "m3uPathType", "0")
+        _set_setting_value(root, "m3uPath", m3u_path)
+        _set_setting_value(root, "startNum", "1")
+        tree.write(settings_path, encoding="utf-8", xml_declaration=True)
+
+        verify_tree = ElementTree.parse(settings_path)
+        values = {
+            element.attrib.get("id", ""): _setting_value(element)
+            for element in verify_tree.getroot().iter("setting")
+        }
+        if values.get("m3uPathType") != "0" or values.get("m3uPath") != m3u_path:
+            return InstanceRepairResult(False, "manual fallback", "IPTV Simple instance settings validation failed.", str(settings_path), str(backup_path))
+        return InstanceRepairResult(True, "instance repair", "IPTV Simple instance settings repaired.", str(settings_path), str(backup_path))
+    except Exception as exc:
+        return InstanceRepairResult(False, "manual fallback", f"Could not repair IPTV Simple instance settings: {exc}")
 
 
 def configure_iptv_simple_url(playlist_url: str) -> tuple[bool, str]:
@@ -141,13 +268,42 @@ def setup_kodi_tv(m3u_path: Path, channel_count: int, playlist_url: str = "") ->
     else:
         steps.append(f"Optional step skipped: {pvr_msg}")
 
+    setup_mode = "unknown"
     config_ok, config_msg = configure_iptv_simple(path_text)
     steps.append(config_msg)
+    if config_ok:
+        verified, verify_msg = verify_iptv_simple_local_file(path_text)
+        steps.append(verify_msg)
+        if verified:
+            setup_mode = "official settings"
+        else:
+            repair = repair_iptv_simple_instance_settings(path_text)
+            steps.append(repair.message)
+            if repair.ok:
+                config_ok = True
+                setup_mode = repair.mode
+                restart_ok, restart_msg = restart_iptv_simple_client()
+                steps.append(restart_msg)
+            else:
+                config_ok = False
+                setup_mode = repair.mode
+    else:
+        repair = repair_iptv_simple_instance_settings(path_text)
+        steps.append(repair.message)
+        if repair.ok:
+            config_ok = True
+            setup_mode = repair.mode
+            restart_ok, restart_msg = restart_iptv_simple_client()
+            steps.append(restart_msg)
+        else:
+            setup_mode = repair.mode
     if playlist_url:
         if not config_ok:
             fallback_ok, fallback_msg = configure_iptv_simple_url(playlist_url)
             steps.append(f"Fallback local URL setup: {fallback_msg}")
             config_ok = fallback_ok
+            if fallback_ok:
+                setup_mode = "url fallback"
         else:
             steps.append("Stable mode: IPTV Simple uses the generated local M3U file; no manual file browsing is needed.")
     reload_ok, reload_msg = reload_pvr()
@@ -166,4 +322,5 @@ def setup_kodi_tv(m3u_path: Path, channel_count: int, playlist_url: str = "") ->
         message=message,
         technical_details="\n".join(steps),
         manual_instructions="" if ok else manual,
+        setup_mode=setup_mode,
     )

@@ -1,8 +1,15 @@
 import unittest
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from resources.lib.pvr import configure_iptv_simple_url, enable_pvr_manager, iptv_simple_manual_instructions, setup_kodi_tv
+from resources.lib.pvr import (
+    configure_iptv_simple_url,
+    enable_pvr_manager,
+    iptv_simple_manual_instructions,
+    repair_iptv_simple_instance_settings,
+    setup_kodi_tv,
+)
 
 
 class PVRTests(unittest.TestCase):
@@ -24,11 +31,14 @@ class PVRTests(unittest.TestCase):
             "resources.lib.pvr.enable_iptv_simple", return_value=(True, "enabled")
         ), patch("resources.lib.pvr.enable_pvr_manager", return_value=(True, "pvr enabled")), patch(
             "resources.lib.pvr.configure_iptv_simple", return_value=(True, "configured")
+        ), patch("resources.lib.pvr.verify_iptv_simple_local_file", return_value=(True, "verified")), patch(
+            "resources.lib.pvr.repair_iptv_simple_instance_settings"
         ), patch("resources.lib.pvr.reload_pvr", return_value=(True, "reloaded")):
             result = setup_kodi_tv(Path("/tmp/live.m3u"), 12)
         self.assertTrue(result.ok)
         self.assertIn("12 channels", result.message)
         self.assertEqual(result.manual_instructions, "")
+        self.assertEqual(result.setup_mode, "official settings")
 
     def test_pvr_manager_invalid_params_is_friendly_optional_warning(self):
         with patch("resources.lib.pvr._json_rpc", return_value={"error": {"code": -32602, "message": "Invalid params."}}):
@@ -44,6 +54,8 @@ class PVRTests(unittest.TestCase):
             "resources.lib.pvr.enable_pvr_manager",
             return_value=(False, "Kodi did not allow automatic PVR manager enabling. If TV is missing, enable PVR in Kodi settings."),
         ), patch("resources.lib.pvr.configure_iptv_simple", return_value=(True, "configured")), patch(
+            "resources.lib.pvr.verify_iptv_simple_local_file", return_value=(True, "verified")
+        ), patch(
             "resources.lib.pvr.reload_pvr", return_value=(True, "reloaded")
         ):
             result = setup_kodi_tv(Path("/tmp/live.m3u"), 13)
@@ -75,6 +87,8 @@ class PVRTests(unittest.TestCase):
         ), patch("resources.lib.pvr.enable_pvr_manager", return_value=(True, "pvr enabled")), patch(
             "resources.lib.pvr.configure_iptv_simple_url", return_value=(True, "configured url")
         ) as configure_url, patch("resources.lib.pvr.configure_iptv_simple", return_value=(True, "configured file")) as configure_file, patch(
+            "resources.lib.pvr.verify_iptv_simple_local_file", return_value=(True, "verified")
+        ), patch(
             "resources.lib.pvr.reload_pvr", return_value=(True, "reloaded")
         ):
             result = setup_kodi_tv(Path("/tmp/live.m3u"), 13, "http://127.0.0.1:41555/playlist.m3u")
@@ -89,12 +103,66 @@ class PVRTests(unittest.TestCase):
         ), patch("resources.lib.pvr.enable_pvr_manager", return_value=(True, "pvr enabled")), patch(
             "resources.lib.pvr.configure_iptv_simple_url", return_value=(True, "configured url")
         ) as configure_url, patch("resources.lib.pvr.configure_iptv_simple", return_value=(False, "file failed")), patch(
+            "resources.lib.pvr.repair_iptv_simple_instance_settings", return_value=type("Result", (), {"ok": False, "mode": "manual fallback", "message": "repair failed"})()
+        ), patch(
             "resources.lib.pvr.reload_pvr", return_value=(True, "reloaded")
         ):
             result = setup_kodi_tv(Path("/tmp/live.m3u"), 13, "http://127.0.0.1:41555/playlist.m3u")
         self.assertTrue(result.ok)
         self.assertIn("Fallback local URL setup", result.technical_details)
         configure_url.assert_called_once()
+
+    def test_setup_uses_instance_repair_when_official_settings_do_not_verify(self):
+        repair_result = type("Result", (), {"ok": True, "mode": "instance repair", "message": "repaired"})()
+        with patch("resources.lib.pvr.iptv_simple_status", return_value=(True, "installed")), patch(
+            "resources.lib.pvr.enable_iptv_simple", return_value=(True, "enabled")
+        ), patch("resources.lib.pvr.enable_pvr_manager", return_value=(True, "pvr enabled")), patch(
+            "resources.lib.pvr.configure_iptv_simple", return_value=(True, "configured")
+        ), patch("resources.lib.pvr.verify_iptv_simple_local_file", return_value=(False, "not applied")), patch(
+            "resources.lib.pvr.repair_iptv_simple_instance_settings", return_value=repair_result
+        ), patch(
+            "resources.lib.pvr.restart_iptv_simple_client", return_value=(True, "restarted")
+        ), patch("resources.lib.pvr.reload_pvr", return_value=(True, "reloaded")):
+            result = setup_kodi_tv(Path("/tmp/live.m3u"), 13)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.setup_mode, "instance repair")
+        self.assertIn("repaired", result.technical_details)
+        self.assertIn("restarted", result.technical_details)
+
+    def test_instance_repair_backs_up_and_updates_known_settings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile = Path(tmp)
+            settings = profile / "instance-settings-1.xml"
+            settings.write_text(
+                '<settings version="2"><setting id="m3uPathType" value="1" /><setting id="m3uPath">old</setting><setting id="startNum" value="9" /><setting id="untouched" value="keep" /></settings>',
+                encoding="utf-8",
+            )
+            result = repair_iptv_simple_instance_settings("/tmp/live.m3u", profile)
+            self.assertTrue(result.ok)
+            self.assertEqual(result.mode, "instance repair")
+            self.assertTrue(Path(result.backup_path).exists())
+            text = settings.read_text(encoding="utf-8")
+            self.assertIn('id="m3uPathType" value="0"', text)
+            self.assertIn("/tmp/live.m3u", text)
+            self.assertIn('id="untouched" value="keep"', text)
+
+    def test_instance_repair_rejects_unknown_xml_shape_without_backup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile = Path(tmp)
+            settings = profile / "instance-settings-1.xml"
+            settings.write_text("<notsettings><item /></notsettings>", encoding="utf-8")
+            result = repair_iptv_simple_instance_settings("/tmp/live.m3u", profile)
+            self.assertFalse(result.ok)
+            self.assertEqual(result.mode, "manual fallback")
+            self.assertFalse((profile / "instance-settings-1.xml.bak").exists())
+
+    def test_instance_repair_handles_missing_profile_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "missing"
+            result = repair_iptv_simple_instance_settings("/tmp/live.m3u", missing)
+            self.assertFalse(result.ok)
+            self.assertEqual(result.mode, "manual fallback")
+            self.assertIn("does not exist", result.message)
 
 
 if __name__ == "__main__":

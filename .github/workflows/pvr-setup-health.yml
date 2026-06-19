@@ -1,0 +1,57 @@
+name: PVR setup health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 8 * * 0"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  pvr-setup-health:
+    runs-on: ubuntu-latest
+    env:
+      MAIL_CONFIGURED: ${{ secrets.MAIL_SERVER != '' && secrets.MAIL_PORT != '' && secrets.MAIL_USERNAME != '' && secrets.MAIL_PASSWORD != '' && secrets.MAIL_FROM != '' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run PVR tests
+        run: python -m unittest tests.test_pvr tests.test_diagnostics
+
+      - name: Check PVR setup contract
+        run: python tools/check_pvr_contract.py
+
+      - name: Open issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Weekly PVR setup health failed"
+          body="The weekly PVR IPTV Simple setup health workflow failed. Check the GitHub Actions logs. This means the Kodi TV repair/setup contract may have regressed."
+          existing=$(gh issue list --state open --search "$title" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+
+      - name: Email PVR setup failure
+        if: failure() && env.MAIL_CONFIGURED == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "Israeli Live TV Stable: PVR setup health failed"
+          to: nird.daus62@gmail.com
+          from: ${{ secrets.MAIL_FROM }}
+          body: "The weekly PVR IPTV Simple setup health workflow failed. Open the latest GitHub Actions run for details."

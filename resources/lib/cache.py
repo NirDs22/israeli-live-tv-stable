@@ -73,6 +73,17 @@ class CacheStore:
         )
         self.save(data)
 
+    def set_pvr_setup_status(self, mode: str, message: str) -> None:
+        data = self.load()
+        data.setdefault("metadata", {}).update(
+            {
+                "pvr_setup_mode": mode,
+                "pvr_setup_message": message,
+                "pvr_setup_checked_at": now_iso(),
+            }
+        )
+        self.save(data)
+
     def unhealthy_until_ttl(self, source_id: str, ttl_seconds: int) -> Optional[str]:
         state = self.source_state(source_id)
         category = state.get("last_failure_category")

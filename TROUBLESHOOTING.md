@@ -35,7 +35,7 @@ Add a legal user source or TVHeadend mapping, then regenerate M3U from Diagnosti
 
 ## Kodi TV Menu Is Empty
 
-Run `Setup Kodi TV` again from the addon. It should repair IPTV Simple automatically without you browsing for the hidden M3U file.
+Run `Setup / Repair Kodi TV` again from the addon. It should repair IPTV Simple automatically without you browsing for the hidden M3U file.
 
 Also check:
 

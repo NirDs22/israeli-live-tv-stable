@@ -91,6 +91,9 @@ def build_diagnostics(
     lines.append(f"Remote channel status: {metadata.get('remote_channels_status', '-')}")
     lines.append(f"Remote channel last checked: {metadata.get('remote_channels_checked_at', '-')}")
     lines.append(f"Remote channel message: {metadata.get('remote_channels_message', '-')}")
+    lines.append(f"IPTV Simple setup mode: {metadata.get('pvr_setup_mode', 'unknown')}")
+    lines.append(f"IPTV Simple setup status: {metadata.get('pvr_setup_message', '-')}")
+    lines.append(f"Generated M3U exists: {'yes' if paths.generated_m3u.exists() else 'no'}")
     if validation_errors:
         lines.append("Config validation errors:")
         lines.extend(f"- {error}" for error in validation_errors)

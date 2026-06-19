@@ -108,7 +108,7 @@ See [MAINTENANCE.md](MAINTENANCE.md) for the rules and commands.
 
 ## Kodi TV Menu
 
-Use `Setup Kodi TV` from the addon main menu. The addon will generate the M3U playlist, configure PVR IPTV Simple Client with the generated local file automatically, try to enable Kodi's PVR manager, and show manual instructions if Kodi blocks automatic setup.
+Use `Setup / Repair Kodi TV` from the addon main menu. The addon will generate the M3U playlist, configure PVR IPTV Simple Client with the generated local file automatically, verify the setting, repair IPTV Simple instance settings if needed, try to enable Kodi's PVR manager, and show manual instructions if Kodi blocks automatic setup.
 
 After setup, open Kodi `TV -> Channels`.
 
@@ -122,6 +122,7 @@ Diagnostics shows:
 - Addon userdata path.
 - User source and TVHeadend mapping paths.
 - Local playlist URL and local playlist server status.
+- IPTV Simple setup mode and generated M3U existence.
 - inputstream.adaptive and IPTV Simple detection.
 - Cache status.
 - Last known good source and failures.
