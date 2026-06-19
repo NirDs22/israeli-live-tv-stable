@@ -93,6 +93,9 @@ def build_diagnostics(
     lines.append(f"Remote channel message: {metadata.get('remote_channels_message', '-')}")
     lines.append(f"IPTV Simple setup mode: {metadata.get('pvr_setup_mode', 'unknown')}")
     lines.append(f"IPTV Simple setup status: {metadata.get('pvr_setup_message', '-')}")
+    lines.append(f"IPTV Simple instance settings path: {metadata.get('pvr_instance_settings_path', '-')}")
+    lines.append(f"IPTV Simple instance settings backup: {metadata.get('pvr_instance_settings_backup_path', '-')}")
+    lines.append(f"Generated M3U channel entries: {metadata.get('pvr_playlist_entry_count', '-')}")
     lines.append(f"Generated M3U exists: {'yes' if paths.generated_m3u.exists() else 'no'}")
     if validation_errors:
         lines.append("Config validation errors:")

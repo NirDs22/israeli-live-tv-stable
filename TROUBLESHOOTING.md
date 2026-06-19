@@ -50,7 +50,7 @@ Install it from Kodi:
 
 `Add-ons -> My add-ons -> PVR clients -> PVR IPTV Simple Client`
 
-Then run `Setup Kodi TV` again.
+Then run `Setup / Repair Kodi TV` again.
 
 ## Kodi Freezes Or UI Is Slow
 

@@ -73,13 +73,24 @@ class CacheStore:
         )
         self.save(data)
 
-    def set_pvr_setup_status(self, mode: str, message: str) -> None:
+    def set_pvr_setup_status(
+        self,
+        mode: str,
+        message: str,
+        *,
+        instance_settings_path: str = "",
+        backup_path: str = "",
+        playlist_entry_count: int = 0,
+    ) -> None:
         data = self.load()
         data.setdefault("metadata", {}).update(
             {
                 "pvr_setup_mode": mode,
                 "pvr_setup_message": message,
                 "pvr_setup_checked_at": now_iso(),
+                "pvr_instance_settings_path": instance_settings_path,
+                "pvr_instance_settings_backup_path": backup_path,
+                "pvr_playlist_entry_count": playlist_entry_count,
             }
         )
         self.save(data)

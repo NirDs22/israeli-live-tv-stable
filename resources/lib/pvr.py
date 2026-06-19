@@ -20,6 +20,9 @@ class PVRSetupResult:
     technical_details: str = ""
     manual_instructions: str = ""
     setup_mode: str = "unknown"
+    instance_settings_path: str = ""
+    backup_path: str = ""
+    playlist_entry_count: int = 0
 
 
 @dataclass
@@ -29,6 +32,21 @@ class InstanceRepairResult:
     message: str
     path: str = ""
     backup_path: str = ""
+
+
+def validate_generated_m3u(m3u_path: Path) -> tuple[bool, int, str]:
+    try:
+        if not m3u_path.exists():
+            return False, 0, "Generated M3U file does not exist."
+        text = m3u_path.read_text(encoding="utf-8", errors="replace")
+        if not text.startswith("#EXTM3U"):
+            return False, 0, "Generated M3U file is not a valid playlist."
+        count = sum(1 for line in text.splitlines() if line.startswith("#EXTINF"))
+        if count <= 0:
+            return False, 0, "Generated M3U playlist has no channels."
+        return True, count, f"Generated M3U playlist has {count} channels."
+    except Exception as exc:
+        return False, 0, f"Could not validate generated M3U file: {exc}"
 
 
 def iptv_simple_manual_instructions(m3u_path: str, playlist_url: str = "") -> str:
@@ -247,7 +265,19 @@ def reload_pvr() -> tuple[bool, str]:
 
 def setup_kodi_tv(m3u_path: Path, channel_count: int, playlist_url: str = "") -> PVRSetupResult:
     path_text = str(m3u_path)
-    manual = iptv_simple_manual_instructions(path_text, playlist_url)
+    manual = iptv_simple_manual_instructions(path_text)
+    playlist_ok, playlist_entry_count, playlist_msg = validate_generated_m3u(m3u_path)
+    if not playlist_ok:
+        return PVRSetupResult(
+            ok=False,
+            m3u_path=path_text,
+            channel_count=channel_count,
+            message="Kodi TV repair could not continue because the generated playlist is not valid.",
+            technical_details=playlist_msg,
+            manual_instructions=manual,
+            setup_mode="manual fallback",
+            playlist_entry_count=playlist_entry_count,
+        )
     installed, status = iptv_simple_status()
     if not installed:
         return PVRSetupResult(
@@ -255,11 +285,13 @@ def setup_kodi_tv(m3u_path: Path, channel_count: int, playlist_url: str = "") ->
             m3u_path=path_text,
             channel_count=channel_count,
             message="PVR IPTV Simple Client is not installed or not detectable.",
-            technical_details=status,
+            technical_details=playlist_msg + "\n" + status,
             manual_instructions=manual,
+            setup_mode="manual fallback",
+            playlist_entry_count=playlist_entry_count,
         )
 
-    steps: list[str] = [status]
+    steps: list[str] = [playlist_msg, status]
     enabled_ok, enabled_msg = enable_iptv_simple()
     steps.append(enabled_msg)
     pvr_ok, pvr_msg = enable_pvr_manager()
@@ -268,52 +300,34 @@ def setup_kodi_tv(m3u_path: Path, channel_count: int, playlist_url: str = "") ->
     else:
         steps.append(f"Optional step skipped: {pvr_msg}")
 
-    setup_mode = "unknown"
+    setup_mode = "manual fallback"
+    instance_settings_path = ""
+    backup_path = ""
     config_ok, config_msg = configure_iptv_simple(path_text)
     steps.append(config_msg)
-    if config_ok:
-        verified, verify_msg = verify_iptv_simple_local_file(path_text)
-        steps.append(verify_msg)
-        if verified:
-            setup_mode = "official settings"
-        else:
-            repair = repair_iptv_simple_instance_settings(path_text)
-            steps.append(repair.message)
-            if repair.ok:
-                config_ok = True
-                setup_mode = repair.mode
-                restart_ok, restart_msg = restart_iptv_simple_client()
-                steps.append(restart_msg)
-            else:
-                config_ok = False
-                setup_mode = repair.mode
+    verified, verify_msg = verify_iptv_simple_local_file(path_text)
+    steps.append(verify_msg)
+
+    repair = repair_iptv_simple_instance_settings(path_text)
+    steps.append(repair.message)
+    instance_settings_path = repair.path
+    backup_path = repair.backup_path
+    config_ok = bool(config_ok and verified and repair.ok)
+    if repair.ok:
+        setup_mode = repair.mode
+        restart_ok, restart_msg = restart_iptv_simple_client()
+        steps.append(restart_msg)
     else:
-        repair = repair_iptv_simple_instance_settings(path_text)
-        steps.append(repair.message)
-        if repair.ok:
-            config_ok = True
-            setup_mode = repair.mode
-            restart_ok, restart_msg = restart_iptv_simple_client()
-            steps.append(restart_msg)
-        else:
-            setup_mode = repair.mode
-    if playlist_url:
-        if not config_ok:
-            fallback_ok, fallback_msg = configure_iptv_simple_url(playlist_url)
-            steps.append(f"Fallback local URL setup: {fallback_msg}")
-            config_ok = fallback_ok
-            if fallback_ok:
-                setup_mode = "url fallback"
-        else:
-            steps.append("Stable mode: IPTV Simple uses the generated local M3U file; no manual file browsing is needed.")
+        setup_mode = repair.mode
+
     reload_ok, reload_msg = reload_pvr()
     steps.append(reload_msg)
 
     ok = config_ok
     message = (
-        f"Kodi TV is ready with {channel_count} channels. Open TV -> Channels."
+        "Kodi TV was repaired. Restart Kodi, wait 60 seconds, then open TV -> Channels."
         if ok
-        else "Kodi TV setup could not be completed automatically."
+        else "Kodi TV repair could not be completed automatically. Open IPTV Simple settings and verify the playlist path manually."
     )
     return PVRSetupResult(
         ok=ok,
@@ -323,4 +337,7 @@ def setup_kodi_tv(m3u_path: Path, channel_count: int, playlist_url: str = "") ->
         technical_details="\n".join(steps),
         manual_instructions="" if ok else manual,
         setup_mode=setup_mode,
+        instance_settings_path=instance_settings_path,
+        backup_path=backup_path,
+        playlist_entry_count=playlist_entry_count,
     )

@@ -49,11 +49,11 @@ If automatic setup fails:
 2. Install and enable `PVR IPTV Simple Client`.
 3. Open its settings.
 4. Run `Israeli Live TV Stable -> Setup / Repair Kodi TV` again.
-5. If manual setup is still needed, use the local playlist URL shown in Diagnostics: `http://127.0.0.1:41555/playlist.m3u`.
+5. If manual setup is still needed, check Diagnostics for the generated M3U path and IPTV Simple instance repair message.
 6. Restart Kodi, or disable and re-enable IPTV Simple.
 7. Open Kodi `TV -> Channels`.
 
-The generated M3U file path is a fallback/debug detail; the addon tries to configure it for you.
+The generated M3U file path is a fallback/debug detail; the addon tries to configure and repair IPTV Simple for you.
 
 ## Debug Logging
 

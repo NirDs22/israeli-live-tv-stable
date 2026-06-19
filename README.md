@@ -96,7 +96,7 @@ If `Prefer TVHeadend` is enabled, mapped TVHeadend sources are tried before user
 
 ## M3U
 
-Use Diagnostics > Regenerate M3U. `Setup Kodi TV` configures IPTV Simple Client automatically, so you should not need to browse for this hidden file yourself.
+Use Diagnostics > Regenerate M3U. `Setup / Repair Kodi TV` configures IPTV Simple Client automatically, so you should not need to browse for this hidden file yourself.
 
 The M3U excludes disabled sources, info-only pages, missing URLs, and unavailable placeholders.
 
@@ -108,11 +108,11 @@ See [MAINTENANCE.md](MAINTENANCE.md) for the rules and commands.
 
 ## Kodi TV Menu
 
-Use `Setup / Repair Kodi TV` from the addon main menu. The addon will generate the M3U playlist, configure PVR IPTV Simple Client with the generated local file automatically, verify the setting, repair IPTV Simple instance settings if needed, try to enable Kodi's PVR manager, and show manual instructions if Kodi blocks automatic setup.
+Use `Setup / Repair Kodi TV` from the addon main menu. The addon will generate the M3U playlist, verify it has channel entries, configure PVR IPTV Simple Client with the generated local file, force-sync IPTV Simple instance settings, and request a PVR reload.
 
 After setup, open Kodi `TV -> Channels`.
 
-If automatic setup fails, run `Setup Kodi TV` again after restarting Kodi. Diagnostics still shows the local playlist URL and generated file path for fallback/debug.
+If automatic setup fails, run `Setup / Repair Kodi TV` again after restarting Kodi. Diagnostics shows the generated file path, playlist entry count, instance settings path, backup path, and last repair result.
 
 ## Diagnostics
 
@@ -121,8 +121,7 @@ Diagnostics shows:
 - Kodi, Python, platform, and addon version.
 - Addon userdata path.
 - User source and TVHeadend mapping paths.
-- Local playlist URL and local playlist server status.
-- IPTV Simple setup mode and generated M3U existence.
+- IPTV Simple setup mode, instance settings path, backup path, and generated M3U entry count.
 - inputstream.adaptive and IPTV Simple detection.
 - Cache status.
 - Last known good source and failures.

@@ -147,21 +147,24 @@ class Router:
         resolver = SourceResolver(self.settings, self.cache, validate_network=False)
         count = generate_m3u(self.registry.channels, resolver, self.paths.generated_m3u)
         local_url = ""
-        server_note = ""
         if self.settings.playlist_server_enabled:
             server_ok, server_status = playlist_server_status(self.settings.playlist_server_port)
             if server_ok:
                 local_url = playlist_url(self.settings.playlist_server_port)
-            else:
-                server_note = f"\n\nLocal playlist URL is not running. Stable local file mode was still configured automatically. Status: {server_status}"
         result = setup_kodi_tv(self.paths.generated_m3u, count, local_url)
-        self.cache.set_pvr_setup_status(result.setup_mode, result.message)
+        self.cache.set_pvr_setup_status(
+            result.setup_mode,
+            result.message,
+            instance_settings_path=result.instance_settings_path,
+            backup_path=result.backup_path,
+            playlist_entry_count=result.playlist_entry_count,
+        )
         if result.ok:
-            self._show_text("Setup Kodi TV", result.message + "\n\n" + result.technical_details + server_note)
+            self._show_text("Kodi TV Repair", result.message + "\n\n" + result.technical_details)
         else:
             self._show_text(
-                "Setup Kodi TV",
-                result.message + "\n\n" + result.technical_details + server_note + "\n\n" + result.manual_instructions,
+                "Kodi TV Repair",
+                result.message + "\n\n" + result.technical_details + "\n\n" + result.manual_instructions,
             )
 
     def restart_playlist_server(self) -> None:
