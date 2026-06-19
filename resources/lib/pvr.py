@@ -34,6 +34,66 @@ class InstanceRepairResult:
     backup_path: str = ""
 
 
+def _xbmcvfs_module():
+    try:
+        import xbmcvfs  # type: ignore
+
+        return xbmcvfs
+    except Exception:
+        return None
+
+
+def _path_exists(path: Path) -> bool:
+    if path.exists():
+        return True
+    xbmcvfs = _xbmcvfs_module()
+    return bool(xbmcvfs and xbmcvfs.exists(str(path)))
+
+
+def _read_text_file(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except PermissionError:
+        xbmcvfs = _xbmcvfs_module()
+        if not xbmcvfs:
+            raise
+        handle = xbmcvfs.File(str(path), "r")
+        try:
+            data = handle.read()
+        finally:
+            handle.close()
+        return data.decode("utf-8", "replace") if isinstance(data, bytes) else str(data)
+
+
+def _write_text_file(path: Path, text: str) -> None:
+    try:
+        path.write_text(text, encoding="utf-8")
+        return
+    except PermissionError:
+        xbmcvfs = _xbmcvfs_module()
+        if not xbmcvfs:
+            raise
+        handle = xbmcvfs.File(str(path), "w")
+        try:
+            handle.write(text)
+        finally:
+            handle.close()
+
+
+def _copy_file(source: Path, target: Path) -> None:
+    try:
+        shutil.copy2(source, target)
+        return
+    except PermissionError:
+        xbmcvfs = _xbmcvfs_module()
+        if not xbmcvfs:
+            raise
+        if xbmcvfs.exists(str(target)):
+            xbmcvfs.delete(str(target))
+        if not xbmcvfs.copy(str(source), str(target)):
+            raise PermissionError(f"Kodi could not copy {source} to {target}")
+
+
 def validate_generated_m3u(m3u_path: Path) -> tuple[bool, int, str]:
     try:
         if not m3u_path.exists():
@@ -166,8 +226,8 @@ def _find_instance_settings(profile_dir: Path) -> Path | None:
     if files:
         return files[0]
     candidate = profile_dir / "instance-settings-1.xml"
-    if profile_dir.exists():
-        candidate.write_text("<settings version=\"2\">\n</settings>\n", encoding="utf-8")
+    if _path_exists(profile_dir):
+        _write_text_file(candidate, "<settings version=\"2\">\n</settings>\n")
         return candidate
     return None
 
@@ -207,30 +267,30 @@ def repair_iptv_simple_instance_settings(m3u_path: str, profile_dir: Path | None
         if profile_dir is None:
             return InstanceRepairResult(False, "manual fallback", message)
 
-    if not profile_dir.exists() or not profile_dir.is_dir():
+    if not _path_exists(profile_dir) or not profile_dir.is_dir():
         return InstanceRepairResult(False, "manual fallback", "IPTV Simple profile directory does not exist.")
 
     try:
         settings_path = _find_instance_settings(profile_dir)
         if not settings_path:
             return InstanceRepairResult(False, "manual fallback", "Could not find or create IPTV Simple instance settings.")
-        tree = ElementTree.parse(settings_path)
-        root = tree.getroot()
+        root = ElementTree.fromstring(_read_text_file(settings_path))
         if not _has_known_settings_shape(root):
             return InstanceRepairResult(False, "manual fallback", "IPTV Simple instance settings format is unknown.", str(settings_path))
 
         backup_path = settings_path.with_suffix(settings_path.suffix + ".bak")
-        shutil.copy2(settings_path, backup_path)
+        _copy_file(settings_path, backup_path)
 
         _set_setting_value(root, "m3uPathType", "0")
         _set_setting_value(root, "m3uPath", m3u_path)
         _set_setting_value(root, "startNum", "1")
-        tree.write(settings_path, encoding="utf-8", xml_declaration=True)
+        xml_text = ElementTree.tostring(root, encoding="unicode")
+        _write_text_file(settings_path, '<?xml version="1.0" encoding="utf-8"?>\n' + xml_text)
 
-        verify_tree = ElementTree.parse(settings_path)
+        verify_root = ElementTree.fromstring(_read_text_file(settings_path))
         values = {
             element.attrib.get("id", ""): _setting_value(element)
-            for element in verify_tree.getroot().iter("setting")
+            for element in verify_root.iter("setting")
         }
         if values.get("m3uPathType") != "0" or values.get("m3uPath") != m3u_path:
             return InstanceRepairResult(False, "manual fallback", "IPTV Simple instance settings validation failed.", str(settings_path), str(backup_path))

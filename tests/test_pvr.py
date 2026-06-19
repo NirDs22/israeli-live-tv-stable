@@ -1,5 +1,6 @@
 import unittest
 import tempfile
+import shutil
 from pathlib import Path
 from unittest.mock import patch
 
@@ -213,6 +214,52 @@ class PVRTests(unittest.TestCase):
             self.assertFalse(result.ok)
             self.assertEqual(result.mode, "manual fallback")
             self.assertIn("does not exist", result.message)
+
+    def test_instance_repair_uses_xbmcvfs_when_python_file_write_is_denied(self):
+        class FakeFile:
+            def __init__(self, path, mode):
+                self.handle = open(path, mode, encoding="utf-8")
+
+            def read(self):
+                return self.handle.read()
+
+            def write(self, text):
+                self.handle.write(text)
+
+            def close(self):
+                self.handle.close()
+
+        class FakeXbmcvfs:
+            @staticmethod
+            def exists(path):
+                return Path(path).exists()
+
+            @staticmethod
+            def delete(path):
+                Path(path).unlink(missing_ok=True)
+                return True
+
+            @staticmethod
+            def copy(source, target):
+                shutil.copyfile(source, target)
+                return True
+
+            File = FakeFile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            profile = Path(tmp)
+            settings = profile / "instance-settings-1.xml"
+            settings.write_text(
+                '<settings version="2"><setting id="m3uPathType" value="1" /><setting id="m3uPath" value="old" /></settings>',
+                encoding="utf-8",
+            )
+            with patch("resources.lib.pvr.shutil.copy2", side_effect=PermissionError("denied")), patch.object(
+                Path, "write_text", side_effect=PermissionError("denied")
+            ), patch("resources.lib.pvr._xbmcvfs_module", return_value=FakeXbmcvfs):
+                result = repair_iptv_simple_instance_settings("/tmp/live.m3u", profile)
+            self.assertTrue(result.ok)
+            self.assertTrue(Path(result.backup_path).exists())
+            self.assertIn("/tmp/live.m3u", settings.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

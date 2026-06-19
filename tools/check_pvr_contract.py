@@ -22,7 +22,8 @@ def main() -> int:
     require(pvr, "verify_iptv_simple_local_file", "PVR setup must verify official IPTV Simple settings.")
     require(pvr, "repair_iptv_simple_instance_settings", "PVR setup must include instance settings repair fallback.")
     require(pvr, "validate_generated_m3u", "PVR setup must validate generated M3U before reporting success.")
-    require(pvr, "shutil.copy2(settings_path, backup_path)", "Instance settings repair must backup XML before editing.")
+    require(pvr, "_copy_file(settings_path, backup_path)", "Instance settings repair must backup XML before editing.")
+    require(pvr, "_xbmcvfs_module", "Instance settings repair must include Kodi xbmcvfs fallback for Android permission errors.")
     require(pvr, "restart_iptv_simple_client", "Instance repair must restart IPTV Simple after XML repair.")
     require(pvr, "Kodi TV was repaired", "PVR setup success message must use repair wording.")
     if "Fallback local URL setup" in pvr:
