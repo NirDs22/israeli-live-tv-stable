@@ -68,6 +68,8 @@ class Router:
             self.generate_m3u()
         elif action == "setup_kodi_tv":
             self.setup_kodi_tv()
+        elif action == "installation_steps":
+            self.installation_steps()
         elif action == "restart_playlist_server":
             self.restart_playlist_server()
         elif action == "health_check":
@@ -92,6 +94,7 @@ class Router:
         self._add_directory("Live Channels", self.url(action="live_channels"))
         if self.settings.show_setup_kodi_tv:
             self._add_directory("Setup / Repair Kodi TV", self.url(action="setup_kodi_tv"))
+        self._add_directory("Installation Steps", self.url(action="installation_steps"))
         self._add_directory("Diagnostics", self.url(action="diagnostics"))
         self._add_directory("Settings", self.url(action="settings"))
         self._add_directory("About", self.url(action="about"))
@@ -247,6 +250,53 @@ class Router:
                 "Kodi TV Repair",
                 result.message + "\n\n" + result.technical_details + "\n\n" + result.manual_instructions,
             )
+
+    def installation_steps(self) -> None:
+        text = (
+            "Install Israeli Live TV Stable from zero\n\n"
+            "1. Download the latest ZIP\n"
+            "- Open the GitHub Releases page for Israeli Live TV Stable.\n"
+            "- Download the newest file named like plugin.video.israeli.live.tv.stable-x.x.x.zip.\n"
+            "- Do not unzip it.\n\n"
+            "2. Move the ZIP to your Kodi device\n"
+            "- Android TV: copy it to Downloads, a USB drive, Google Drive, or another folder Kodi can browse.\n"
+            "- Windows, macOS, or Linux: keep the ZIP somewhere easy to find, such as Downloads.\n\n"
+            "3. Allow ZIP installs if Kodi asks\n"
+            "- In Kodi, open Settings -> System -> Add-ons.\n"
+            "- Enable Unknown sources if it is disabled.\n"
+            "- Accept the warning only if you downloaded the ZIP from your own trusted GitHub release.\n\n"
+            "4. Install the addon ZIP\n"
+            "- Go to Add-ons -> Install from zip file.\n"
+            "- Choose the ZIP file you downloaded.\n"
+            "- Wait for Kodi to show that Israeli Live TV Stable was installed.\n\n"
+            "5. Open the addon\n"
+            "- Go to Add-ons -> Video add-ons.\n"
+            "- Open Israeli Live TV Stable.\n"
+            "- You should see Live Channels, Setup / Repair Kodi TV, Installation Steps, Diagnostics, Settings, and About.\n\n"
+            "6. Set up Kodi TV mode\n"
+            "- Select Setup / Repair Kodi TV.\n"
+            "- The addon will generate the playlist and try to configure PVR IPTV Simple Client automatically.\n"
+            "- When it finishes, restart Kodi if the message asks you to, or if channels do not appear.\n\n"
+            "7. Open the native Kodi TV menu\n"
+            "- Wait up to 60 seconds after setup or restart.\n"
+            "- Open Kodi TV -> Channels.\n"
+            "- Use TV -> Channels, not Radio -> Channels.\n\n"
+            "8. If TV channels do not appear\n"
+            "- Run Israeli Live TV Stable -> Setup / Repair Kodi TV again.\n"
+            "- Confirm PVR IPTV Simple Client is installed and enabled: Add-ons -> My add-ons -> PVR clients.\n"
+            "- Confirm Kodi PVR is enabled in Settings -> PVR & Live TV.\n"
+            "- Restart Kodi after repair.\n"
+            "- Open Israeli Live TV Stable -> Diagnostics and check generated M3U entries, IPTV Simple status, and last setup message.\n\n"
+            "9. If addon channels work but Kodi TV is empty\n"
+            "- The addon playback path and Kodi TV path are different.\n"
+            "- Run Setup / Repair Kodi TV, restart Kodi, then wait 60 seconds.\n"
+            "- If it is still empty, open Diagnostics and review the IPTV Simple setup mode and generated M3U channel entries.\n\n"
+            "10. If a specific channel fails\n"
+            "- Open Live Channels and try the channel directly.\n"
+            "- Open Diagnostics for cache and source status.\n"
+            "- For Channel 12, open Diagnostics -> Channel 12 Diagnostics.\n"
+        )
+        self._show_text("Installation Steps", text)
 
     def restart_playlist_server(self) -> None:
         try:
