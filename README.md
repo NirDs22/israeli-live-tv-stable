@@ -14,6 +14,7 @@ The goal is boring stability: open the addon, browse live channels, play a confi
 - Plays through Kodi resolved URL APIs.
 - Generates a simple M3U file containing only playable configured/legal sources.
 - Can set up Kodi's native TV menu through PVR IPTV Simple Client.
+- Includes an in-addon `Installation Steps` screen for first-time setup help.
 - Provides Diagnostics for config paths, cache state, source failures, and addon status.
 
 ## What It Does Not Do
@@ -107,6 +108,8 @@ This repo includes a daily GitHub Actions health check and a Codex maintenance a
 See [MAINTENANCE.md](MAINTENANCE.md) for the rules and commands.
 
 ## Kodi TV Menu
+
+For first-time setup, open `Installation Steps` from the addon main menu. It shows the full install flow inside Kodi, including ZIP install, Kodi TV repair, restart guidance, and fallback checks.
 
 Use `Setup / Repair Kodi TV` from the addon main menu. The addon will generate the M3U playlist, verify it has channel entries, configure PVR IPTV Simple Client with the generated local file, force-sync IPTV Simple instance settings, and request a PVR reload.
 
