@@ -21,6 +21,16 @@ class CacheTests(unittest.TestCase):
             self.assertEqual(cache.last_known_source_id("kan11"), "source1")
             self.assertEqual(cache.channel_state("kan11")["last_successful_source_type"], "DIRECT_HLS")
 
+    def test_channel12_cache_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = CacheStore(Path(tmp) / "cache.json")
+            cache.set_channel12_success("source12", "DIRECT_HLS")
+            cache.set_channel12_failure("keshet12_timeout", "timed out")
+            state = cache.channel12_state()
+            self.assertEqual(state["channel12_last_successful_source"], "source12")
+            self.assertEqual(state["channel12_last_failure_reason"], "keshet12_timeout")
+            self.assertEqual(state["channel12_last_failure_details"], "timed out")
+
 
 if __name__ == "__main__":
     unittest.main()

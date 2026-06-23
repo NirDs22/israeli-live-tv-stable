@@ -4,6 +4,12 @@
 
 The channel has no configured playable source. Add a legal source to `user_sources.json` or configure a local TVHeadend mapping.
 
+## Channel 12 / Keshet 12
+
+Channel 12 has an isolated resolver path. Open `Diagnostics -> Channel 12 Diagnostics` to test only Channel 12, clear only its cache, or see the `channel12_override.json` path.
+
+If you add an override, use only a legal user-provided source. Bad override JSON is ignored and will not affect other channels.
+
 ## inputstream.adaptive Missing
 
 Some DASH/HLS sources may require `inputstream.adaptive`. Install and enable it from Kodi's add-on repository. Diagnostics shows whether it is detected.

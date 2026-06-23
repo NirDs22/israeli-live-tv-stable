@@ -5,6 +5,12 @@ from typing import Dict, List
 from urllib.parse import parse_qsl, urlencode
 
 from .cache import CacheStore
+from .channels.keshet12 import (
+    build_channel12_diagnostics,
+    channel12_override_path,
+    disable_channel12_override,
+    resolve_keshet12,
+)
 from .config import RuntimePaths, default_paths, ensure_user_files
 from .diagnostics import build_diagnostics, inputstream_adaptive_available
 from .healthcheck import check_source
@@ -46,6 +52,16 @@ class Router:
             self.play(params.get("channel_id", ""), params.get("skip_source_id", ""))
         elif action == "diagnostics":
             self.diagnostics()
+        elif action == "channel12_diagnostics":
+            self.channel12_diagnostics()
+        elif action == "channel12_test":
+            self.channel12_test(params.get("mode", "auto"))
+        elif action == "channel12_clear_cache":
+            self.channel12_clear_cache()
+        elif action == "channel12_show_override_path":
+            self.channel12_show_override_path()
+        elif action == "channel12_disable_override":
+            self.channel12_disable_override()
         elif action == "clear_cache":
             self.clear_cache()
         elif action == "generate_m3u":
@@ -102,6 +118,21 @@ class Router:
             failure = FailureResult(None, category=FailureCategory.UNKNOWN_ERROR, user_message="Channel was not found.", technical_details=channel_id)
             fail_to_kodi(self.handle, failure)
             return
+        if channel.id == "keshet12":
+            result = resolve_keshet12(
+                channel,
+                self.paths,
+                self.settings,
+                self.cache,
+                validate_network=True,
+                inputstream_adaptive_available=inputstream_adaptive_available(),
+            )
+            if isinstance(result, PlayableResult):
+                resolve_to_kodi(self.handle, result)
+            else:
+                self.cache.set_channel_failure(channel.id, result.category.value)
+                fail_to_kodi(self.handle, result)
+            return
         resolver = SourceResolver(
             self.settings,
             self.cache,
@@ -131,8 +162,58 @@ class Router:
         self._add_directory("Restart playlist server", self.url(action="restart_playlist_server"))
         self._add_directory("Setup / Repair Kodi TV", self.url(action="setup_kodi_tv"))
         self._add_directory("Update channel list now", self.url(action="update_channels"))
+        self._add_directory("Channel 12 Diagnostics", self.url(action="channel12_diagnostics"))
         self._add_directory("Show user source file path", self.url(action="user_source_instructions"))
         self._end_directory()
+
+    def channel12_diagnostics(self) -> None:
+        channel = self.registry.get("keshet12")
+        self._show_text("Channel 12 Diagnostics", build_channel12_diagnostics(self.paths, channel, self.cache))
+        self._add_directory("Test Channel 12 now", self.url(action="channel12_test", mode="auto"))
+        self._add_directory("Try normal resolver", self.url(action="channel12_test", mode="normal"))
+        self._add_directory("Try user override", self.url(action="channel12_test", mode="override"))
+        self._add_directory("Try TVHeadend mapping", self.url(action="channel12_test", mode="tvheadend"))
+        self._add_directory("Clear Channel 12 cache", self.url(action="channel12_clear_cache"))
+        self._add_directory("Show Channel 12 override path", self.url(action="channel12_show_override_path"))
+        self._add_directory("Disable Channel 12 override", self.url(action="channel12_disable_override"))
+        self._end_directory()
+
+    def channel12_test(self, mode: str = "auto") -> None:
+        channel = self.registry.get("keshet12")
+        if not channel:
+            self._show_text("Channel 12 test", "Channel 12 is missing from the channel registry.")
+            return
+        result = resolve_keshet12(
+            channel,
+            self.paths,
+            self.settings,
+            self.cache,
+            validate_network=True,
+            inputstream_adaptive_available=inputstream_adaptive_available(),
+            mode=mode,
+        )
+        if isinstance(result, PlayableResult):
+            self._show_text(
+                "Channel 12 test",
+                f"Channel 12 resolved successfully.\n\nSource: {result.source.id}\nType: {result.source.type.value}\nURL configured: yes",
+            )
+        else:
+            self._show_text("Channel 12 test", f"{result.user_message}\n\n{result.category.value}\n{result.technical_details}")
+
+    def channel12_clear_cache(self) -> None:
+        self.cache.clear_channel12()
+        self._notify("Channel 12 cache cleared")
+
+    def channel12_show_override_path(self) -> None:
+        self._show_text(
+            "Channel 12 override",
+            f"Channel 12 override path:\n{channel12_override_path(self.paths)}\n\n"
+            "Use this only for a legal user-provided Channel 12 source.",
+        )
+
+    def channel12_disable_override(self) -> None:
+        disable_channel12_override(self.paths)
+        self._notify("Channel 12 override disabled")
 
     def clear_cache(self) -> None:
         self.cache.clear()

@@ -97,6 +97,10 @@ def build_diagnostics(
     lines.append(f"IPTV Simple instance settings backup: {metadata.get('pvr_instance_settings_backup_path', '-')}")
     lines.append(f"Generated M3U channel entries: {metadata.get('pvr_playlist_entry_count', '-')}")
     lines.append(f"Generated M3U exists: {'yes' if paths.generated_m3u.exists() else 'no'}")
+    lines.append(f"Channel 12 last source: {metadata.get('channel12_last_successful_source', '-')}")
+    lines.append(f"Channel 12 last success: {metadata.get('channel12_last_successful_at', '-')}")
+    lines.append(f"Channel 12 last failure: {metadata.get('channel12_last_failure_reason', '-')}")
+    lines.append(f"Channel 12 override path: {paths.userdata / 'channel12_override.json'}")
     if validation_errors:
         lines.append("Config validation errors:")
         lines.extend(f"- {error}" for error in validation_errors)

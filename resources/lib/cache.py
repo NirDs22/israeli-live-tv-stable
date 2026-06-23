@@ -95,6 +95,56 @@ class CacheStore:
         )
         self.save(data)
 
+    def set_channel12_success(self, source_id: str, source_type: str = "") -> None:
+        data = self.load()
+        data.setdefault("metadata", {}).update(
+            {
+                "channel12_last_successful_source": source_id,
+                "channel12_last_successful_source_type": source_type,
+                "channel12_last_successful_at": now_iso(),
+                "channel12_last_failure_reason": "",
+            }
+        )
+        self.save(data)
+
+    def set_channel12_failure(self, reason: str, details: str = "") -> None:
+        data = self.load()
+        data.setdefault("metadata", {}).update(
+            {
+                "channel12_last_failure_reason": reason,
+                "channel12_last_failure_at": now_iso(),
+                "channel12_last_failure_details": details,
+            }
+        )
+        self.save(data)
+
+    def channel12_state(self) -> Dict[str, Any]:
+        metadata = self.load().setdefault("metadata", {})
+        return {
+            "channel12_last_successful_source": metadata.get("channel12_last_successful_source", ""),
+            "channel12_last_successful_source_type": metadata.get("channel12_last_successful_source_type", ""),
+            "channel12_last_successful_at": metadata.get("channel12_last_successful_at", ""),
+            "channel12_last_failure_reason": metadata.get("channel12_last_failure_reason", ""),
+            "channel12_last_failure_at": metadata.get("channel12_last_failure_at", ""),
+            "channel12_last_failure_details": metadata.get("channel12_last_failure_details", ""),
+        }
+
+    def clear_channel12(self) -> None:
+        data = self.load()
+        metadata = data.setdefault("metadata", {})
+        for key in [
+            "channel12_last_successful_source",
+            "channel12_last_successful_source_type",
+            "channel12_last_successful_at",
+            "channel12_last_failure_reason",
+            "channel12_last_failure_at",
+            "channel12_last_failure_details",
+        ]:
+            metadata.pop(key, None)
+        channels = data.setdefault("channels", {})
+        channels.pop("keshet12", None)
+        self.save(data)
+
     def unhealthy_until_ttl(self, source_id: str, ttl_seconds: int) -> Optional[str]:
         state = self.source_state(source_id)
         category = state.get("last_failure_category")

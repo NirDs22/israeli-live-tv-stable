@@ -37,6 +37,16 @@ class FailureCategory(str, Enum):
     SOURCE_INFO_ONLY = "source_info_only"
     INVALID_USER_CONFIG = "invalid_user_config"
     UNKNOWN_ERROR = "unknown_error"
+    KESHET12_TIMEOUT = "keshet12_timeout"
+    KESHET12_HTTP_ERROR = "keshet12_http_error"
+    KESHET12_FORBIDDEN = "keshet12_forbidden"
+    KESHET12_NOT_FOUND = "keshet12_not_found"
+    KESHET12_BAD_RESPONSE_SHAPE = "keshet12_bad_response_shape"
+    KESHET12_NO_PLAYABLE_SOURCE = "keshet12_no_playable_source"
+    KESHET12_INPUTSTREAM_MISSING = "keshet12_inputstream_missing"
+    KESHET12_MANIFEST_INVALID = "keshet12_manifest_invalid"
+    KESHET12_QUALITY_SELECTION_FAILED = "keshet12_quality_selection_failed"
+    KESHET12_UNKNOWN_ERROR = "keshet12_unknown_error"
 
 
 @dataclass
