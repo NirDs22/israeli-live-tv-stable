@@ -75,6 +75,7 @@ class HealthReport:
     sources: list[SourceCheck] = field(default_factory=list)
     candidates: list[CandidateResult] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    keshet12: dict[str, Any] = field(default_factory=dict)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -275,6 +276,21 @@ def generate_report_markdown(report: HealthReport) -> str:
         for candidate in report.candidates:
             lines.append(f"- `{candidate.channel_id}` / `{candidate.source_id}`: {candidate.status} - {candidate.message}")
 
+    if report.keshet12:
+        lines.extend(["", "## Channel 12 / Keshet 12", ""])
+        lines.append(f"- Checked: {'yes' if report.keshet12.get('checked') else 'no'}")
+        lines.append(f"- Primary: {report.keshet12.get('primary_source_id') or '-'} ({report.keshet12.get('primary_status') or '-'})")
+        lines.append(f"- Working sources: {report.keshet12.get('working_source_count', 0)}")
+        lines.append(f"- Broken sources: {report.keshet12.get('broken_source_count', 0)}")
+        lines.append(f"- Replacement search needed: {'yes' if report.keshet12.get('replacement_search_needed') else 'no'}")
+        lines.append(f"- Automatic repair attempted: {'yes' if report.keshet12.get('repair_attempted') else 'no'}")
+        actions = report.keshet12.get("repair_actions") or []
+        if actions:
+            lines.append("- Repair actions:")
+            lines.extend(f"  - {action}" for action in actions)
+        else:
+            lines.append("- Repair actions: none")
+
     if report.notes:
         lines.extend(["", "## Notes", ""])
         lines.extend(f"- {note}" for note in report.notes)
@@ -326,9 +342,13 @@ def run(args: argparse.Namespace) -> int:
         all_broken = bool(channel_checks) and working_count == 0
         promoted = False
 
+        channel_repair_actions: list[str] = []
+
         if args.apply_fallbacks and primary and not primary_ok and working_count:
             promoted = promote_best_fallback(channel, channel_checks)
             changed = changed or promoted
+            if promoted:
+                channel_repair_actions.append("promoted best working fallback to primary priority")
 
         if args.apply_candidates and replacement_needed:
             for candidate in candidate_map.get(channel_id, []):
@@ -338,30 +358,71 @@ def run(args: argparse.Namespace) -> int:
                 valid, message = validate_candidate(candidate)
                 if not valid:
                     report.candidates.append(CandidateResult(channel_id, candidate_id, "rejected", message, str(candidate.get("url", ""))))
+                    channel_repair_actions.append(f"rejected candidate {candidate_id}: {message}")
                     continue
                 ok, status = check_url(candidate, args.timeout)
                 if not ok:
                     report.candidates.append(CandidateResult(channel_id, candidate_id, "failed_validation", status, str(candidate.get("url", ""))))
+                    channel_repair_actions.append(f"candidate {candidate_id} failed validation: {status}")
                     continue
                 add_candidate_as_fallback(channel, candidate)
                 changed = True
                 report.candidates.append(CandidateResult(channel_id, candidate_id, "added_as_fallback", "validated and added", str(candidate.get("url", ""))))
+                channel_repair_actions.append(f"added validated candidate {candidate_id} as fallback")
                 break
 
-        report.channels.append(
-            ChannelSummary(
-                channel_id=channel_id,
-                channel_name=channel_name,
-                primary_source_id=str(primary.get("id", "")) if primary else "",
-                primary_ok=primary_ok,
-                working_source_count=working_count,
-                checked_source_count=len(channel_checks),
-                broken_source_count=broken_count,
-                fallback_promoted=promoted,
-                replacement_search_needed=replacement_needed,
-                all_sources_broken=all_broken,
-            )
+        summary = ChannelSummary(
+            channel_id=channel_id,
+            channel_name=channel_name,
+            primary_source_id=str(primary.get("id", "")) if primary else "",
+            primary_ok=primary_ok,
+            working_source_count=working_count,
+            checked_source_count=len(channel_checks),
+            broken_source_count=broken_count,
+            fallback_promoted=promoted,
+            replacement_search_needed=replacement_needed,
+            all_sources_broken=all_broken,
         )
+        report.channels.append(summary)
+
+        if channel_id == "keshet12":
+            primary_status = "-"
+            if primary:
+                primary_status = "ok" if primary_ok else "failed"
+            if replacement_needed and not channel_repair_actions:
+                channel_repair_actions.append("no reviewed replacement candidate was available")
+            report.keshet12 = {
+                "checked": True,
+                "channel_name": channel_name,
+                "primary_source_id": summary.primary_source_id,
+                "primary_ok": primary_ok,
+                "primary_status": primary_status,
+                "working_source_count": working_count,
+                "checked_source_count": len(channel_checks),
+                "broken_source_count": broken_count,
+                "fallback_promoted": promoted,
+                "replacement_search_needed": replacement_needed,
+                "all_sources_broken": all_broken,
+                "repair_attempted": bool(replacement_needed and (args.apply_fallbacks or args.apply_candidates)),
+                "repair_actions": channel_repair_actions,
+            }
+
+    if not report.keshet12:
+        report.keshet12 = {
+            "checked": False,
+            "primary_source_id": "",
+            "primary_ok": False,
+            "primary_status": "missing",
+            "working_source_count": 0,
+            "checked_source_count": 0,
+            "broken_source_count": 0,
+            "fallback_promoted": False,
+            "replacement_search_needed": True,
+            "all_sources_broken": True,
+            "repair_attempted": False,
+            "repair_actions": ["keshet12 channel entry was not found"],
+        }
+        report.notes.append("Keshet 12 channel entry is missing from channels.json.")
 
     report.changed = changed
     if changed and not args.dry_run:

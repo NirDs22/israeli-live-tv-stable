@@ -71,6 +71,39 @@ class ChannelHealthToolTests(unittest.TestCase):
             self.assertTrue(summary["fallback_promoted"])
             self.assertTrue(summary["replacement_search_needed"])
 
+    def test_keshet12_broken_primary_reports_repair_attempt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_json(
+                Path(tmp) / "channels.json",
+                {"channels": [{"id": "keshet12", "name": "Keshet 12", "enabled": True, "sources": [source("primary", 10), source("fallback", 30)]}]},
+            )
+            write_json(Path(tmp) / "channel_candidates.json", {"channels": {"keshet12": []}, "rejected": []})
+
+            def fake_check(item, timeout):
+                return (False, "http_404") if item["id"] == "primary" else (True, "ok")
+
+            with patch("tools.check_channels.check_url", side_effect=fake_check):
+                check_channels.run(self.args(tmp, apply_fallbacks=True, apply_candidates=True))
+
+            report = read_json(Path(tmp) / "report.json")
+            keshet12 = report["keshet12"]
+            self.assertTrue(keshet12["checked"])
+            self.assertTrue(keshet12["replacement_search_needed"])
+            self.assertTrue(keshet12["repair_attempted"])
+            self.assertTrue(keshet12["fallback_promoted"])
+            self.assertIn("promoted best working fallback", keshet12["repair_actions"][0])
+
+    def test_missing_keshet12_is_reported(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.write_channels(tmp, [source("primary", 10)])
+            self.write_candidates(tmp, [])
+            with patch("tools.check_channels.check_url", return_value=(True, "ok")):
+                check_channels.run(self.args(tmp, apply_fallbacks=True, apply_candidates=True))
+
+            report = read_json(Path(tmp) / "report.json")
+            self.assertFalse(report["keshet12"]["checked"])
+            self.assertTrue(report["keshet12"]["replacement_search_needed"])
+
     def test_broken_fallback_triggers_replacement_search_even_when_primary_works(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.write_channels(tmp, [source("primary", 10), source("fallback", 30)])

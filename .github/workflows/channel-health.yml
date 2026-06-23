@@ -75,21 +75,21 @@ jobs:
         run: |
           python tools/check_channels.py \
             --dry-run \
-            --report-json channel-health-report.json \
-            --report-markdown channel-health-report.md || true
+            --report-json channel-health-issue-report.json \
+            --report-markdown channel-health-issue-report.md || true
           python - <<'PY'
           import json
           import os
           import subprocess
           from pathlib import Path
 
-          report = json.loads(Path("channel-health-report.json").read_text(encoding="utf-8"))
+          report = json.loads(Path("channel-health-issue-report.json").read_text(encoding="utf-8"))
           broken = [source for source in report.get("sources", []) if not source.get("ok")]
           if not broken:
               raise SystemExit(0)
 
           title = "Daily channel health: replacement search needed"
-          body = Path("channel-health-report.md").read_text(encoding="utf-8")
+          body = Path("channel-health-issue-report.md").read_text(encoding="utf-8")
           existing = subprocess.run(
               ["gh", "issue", "list", "--state", "open", "--label", "channel-health", "--search", title, "--json", "number", "--jq", ".[0].number"],
               text=True,
@@ -135,8 +135,10 @@ jobs:
           broken = [source for source in report.get("sources", []) if not source.get("ok")]
           promoted = [channel for channel in report.get("channels", []) if channel.get("fallback_promoted")]
           candidates = report.get("candidates", [])
+          keshet12 = report.get("keshet12") or {}
           changed = bool(report.get("changed"))
-          should_email = bool(broken or promoted or candidates or changed)
+          keshet12_attention = bool(keshet12 and (not keshet12.get("checked") or keshet12.get("replacement_search_needed") or keshet12.get("fallback_promoted") or keshet12.get("all_sources_broken")))
+          should_email = bool(broken or promoted or candidates or changed or keshet12_attention)
 
           lines = [
               "Daily Israeli Live TV Stable channel maintenance report.",
@@ -144,6 +146,7 @@ jobs:
               f"Checked at: {report.get('checked_at', '-')}",
               f"Broken sources detected: {len(broken)}",
               f"Safe metadata changes prepared: {'yes' if changed else 'no'}",
+              f"Channel 12 status: {keshet12.get('primary_status', '-') if keshet12 else '-'}",
               "",
               "What was done:",
           ]
@@ -156,6 +159,15 @@ jobs:
                       f"- Candidate {candidate.get('source_id')} for {candidate.get('channel_id')}: "
                       f"{candidate.get('status')} - {candidate.get('message')}"
                   )
+          if keshet12:
+              lines.append(
+                  "- Channel 12 checked: "
+                  f"working={keshet12.get('working_source_count', 0)}, "
+                  f"broken={keshet12.get('broken_source_count', 0)}, "
+                  f"repair_attempted={'yes' if keshet12.get('repair_attempted') else 'no'}."
+              )
+              for action in keshet12.get("repair_actions") or []:
+                  lines.append(f"- Channel 12 repair action: {action}")
           if broken:
               lines.append("- Opened or updated a GitHub issue/report for remaining broken sources.")
           if os.environ.get("PR_URL"):
