@@ -18,6 +18,15 @@ def data_dir() -> Path:
     return repo_root() / "resources" / "data"
 
 
+def resolve_addon_asset(value: str) -> str:
+    if not value:
+        return ""
+    path = Path(value)
+    if path.is_absolute() or "://" in value:
+        return value
+    return str(repo_root() / path)
+
+
 def read_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)

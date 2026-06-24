@@ -19,6 +19,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from resources.lib.models import FailureCategory, PLAYABLE_SOURCE_TYPES, SourceType, source_from_dict  # noqa: E402
+from resources.lib.channels.keshet12 import (  # noqa: E402
+    DYNAMIC_SOURCE_PREFIX,
+    KESHET12_RELATIVE_PATHS,
+    check_public_entitlement_path,
+)
 
 
 CHECKED_SOURCE_TYPES = {SourceType.DIRECT_HLS.value, SourceType.DIRECT_DASH.value}
@@ -114,6 +119,22 @@ def checked_sources(channel: dict[str, Any]) -> list[dict[str, Any]]:
         and source.get("type") in CHECKED_SOURCE_TYPES
         and source.get("url")
         and not source.get("is_user_configured", False)
+    ]
+
+
+def keshet12_entitlement_sources() -> list[dict[str, Any]]:
+    return [
+        {
+            "id": f"{DYNAMIC_SOURCE_PREFIX}{path_id}",
+            "type": SourceType.DIRECT_HLS.value,
+            "priority": 10 + (index * 10),
+            "enabled": True,
+            "url": relative_path,
+            "headers": {},
+            "notes": "Dynamic public/free entitlement path; temporary ticket is never stored.",
+            "dynamic_entitlement": True,
+        }
+        for index, (path_id, relative_path) in enumerate(KESHET12_RELATIVE_PATHS)
     ]
 
 
@@ -314,12 +335,15 @@ def run(args: argparse.Namespace) -> int:
             continue
         channel_id = str(channel.get("id", ""))
         channel_name = str(channel.get("name", channel_id))
-        sources = checked_sources(channel)
+        sources = keshet12_entitlement_sources() if channel_id == "keshet12" else checked_sources(channel)
         primary = primary_source(sources)
         channel_checks: list[SourceCheck] = []
 
         for source in sorted(sources, key=source_sort_key):
-            ok, status = check_url(source, args.timeout)
+            if channel_id == "keshet12" and source.get("dynamic_entitlement"):
+                ok, status = check_public_entitlement_path(str(source.get("url", "")), args.timeout)
+            else:
+                ok, status = check_url(source, args.timeout)
             check = SourceCheck(
                 channel_id=channel_id,
                 channel_name=channel_name,
@@ -344,13 +368,13 @@ def run(args: argparse.Namespace) -> int:
 
         channel_repair_actions: list[str] = []
 
-        if args.apply_fallbacks and primary and not primary_ok and working_count:
+        if args.apply_fallbacks and channel_id != "keshet12" and primary and not primary_ok and working_count:
             promoted = promote_best_fallback(channel, channel_checks)
             changed = changed or promoted
             if promoted:
                 channel_repair_actions.append("promoted best working fallback to primary priority")
 
-        if args.apply_candidates and replacement_needed:
+        if args.apply_candidates and channel_id != "keshet12" and replacement_needed:
             for candidate in candidate_map.get(channel_id, []):
                 candidate_id = str(candidate.get("id", ""))
                 if candidate_exists(channel, candidate_id):
@@ -389,8 +413,10 @@ def run(args: argparse.Namespace) -> int:
             primary_status = "-"
             if primary:
                 primary_status = "ok" if primary_ok else "failed"
+            if primary and not primary_ok and working_count:
+                channel_repair_actions.append("runtime resolver will use the first working entitlement fallback path")
             if replacement_needed and not channel_repair_actions:
-                channel_repair_actions.append("no reviewed replacement candidate was available")
+                channel_repair_actions.append("reviewed entitlement paths need investigation; no ticket or tokenized URL was stored")
             report.keshet12 = {
                 "checked": True,
                 "channel_name": channel_name,
@@ -403,8 +429,9 @@ def run(args: argparse.Namespace) -> int:
                 "fallback_promoted": promoted,
                 "replacement_search_needed": replacement_needed,
                 "all_sources_broken": all_broken,
-                "repair_attempted": bool(replacement_needed and (args.apply_fallbacks or args.apply_candidates)),
+                "repair_attempted": bool(replacement_needed),
                 "repair_actions": channel_repair_actions,
+                "resolver_mode": "dynamic_public_entitlement",
             }
 
     if not report.keshet12:

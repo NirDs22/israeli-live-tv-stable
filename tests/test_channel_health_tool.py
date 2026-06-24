@@ -71,7 +71,7 @@ class ChannelHealthToolTests(unittest.TestCase):
             self.assertTrue(summary["fallback_promoted"])
             self.assertTrue(summary["replacement_search_needed"])
 
-    def test_keshet12_broken_primary_reports_repair_attempt(self):
+    def test_keshet12_checks_entitlement_flow_and_uses_runtime_fallback(self):
         with tempfile.TemporaryDirectory() as tmp:
             write_json(
                 Path(tmp) / "channels.json",
@@ -79,10 +79,13 @@ class ChannelHealthToolTests(unittest.TestCase):
             )
             write_json(Path(tmp) / "channel_candidates.json", {"channels": {"keshet12": []}, "rejected": []})
 
-            def fake_check(item, timeout):
-                return (False, "http_404") if item["id"] == "primary" else (True, "ok")
+            calls = []
 
-            with patch("tools.check_channels.check_url", side_effect=fake_check):
+            def fake_entitlement_check(relative_path, timeout):
+                calls.append(relative_path)
+                return (False, "keshet12_not_found") if len(calls) == 1 else (True, "ok")
+
+            with patch("tools.check_channels.check_public_entitlement_path", side_effect=fake_entitlement_check):
                 check_channels.run(self.args(tmp, apply_fallbacks=True, apply_candidates=True))
 
             report = read_json(Path(tmp) / "report.json")
@@ -90,8 +93,28 @@ class ChannelHealthToolTests(unittest.TestCase):
             self.assertTrue(keshet12["checked"])
             self.assertTrue(keshet12["replacement_search_needed"])
             self.assertTrue(keshet12["repair_attempted"])
-            self.assertTrue(keshet12["fallback_promoted"])
-            self.assertIn("promoted best working fallback", keshet12["repair_actions"][0])
+            self.assertFalse(keshet12["fallback_promoted"])
+            self.assertEqual(keshet12["resolver_mode"], "dynamic_public_entitlement")
+            self.assertIn("runtime resolver", keshet12["repair_actions"][0])
+            self.assertGreaterEqual(len(calls), 2)
+
+            payload = read_json(Path(tmp) / "channels.json")
+            self.assertEqual(payload["channels"][0]["sources"][0]["priority"], 10)
+
+    def test_keshet12_checker_does_not_store_tokenized_url(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_json(
+                Path(tmp) / "channels.json",
+                {"channels": [{"id": "keshet12", "name": "Keshet 12", "enabled": True, "sources": []}]},
+            )
+            write_json(Path(tmp) / "channel_candidates.json", {"channels": {"keshet12": []}, "rejected": []})
+            with patch("tools.check_channels.check_public_entitlement_path", return_value=(True, "ok")):
+                check_channels.run(self.args(tmp))
+
+            report_text = (Path(tmp) / "report.json").read_text(encoding="utf-8")
+            self.assertNotIn("mako-streaming.akamaized.net", report_text)
+            self.assertNotIn("ticket=", report_text)
+            self.assertIn("/direct/hls/live/", report_text)
 
     def test_missing_keshet12_is_reported(self):
         with tempfile.TemporaryDirectory() as tmp:

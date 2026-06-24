@@ -6,6 +6,7 @@ from resources.lib.config import RuntimePaths, ensure_user_files
 from resources.lib.registry import load_registry
 from resources.lib.settings import AddonSettings
 from resources.lib.utils import write_json
+from resources.lib.utils import resolve_addon_asset
 
 
 class RegistryTests(unittest.TestCase):
@@ -75,6 +76,11 @@ class RegistryTests(unittest.TestCase):
             registry = load_registry(paths, AddonSettings())
             self.assertEqual(registry.channels, [])
             self.assertTrue(registry.validation.errors)
+
+    def test_relative_channel_logo_resolves_inside_addon(self):
+        resolved = resolve_addon_asset("resources/data/logos/kan11.png")
+        self.assertTrue(Path(resolved).is_absolute())
+        self.assertTrue(resolved.endswith("resources/data/logos/kan11.png"))
 
 
 if __name__ == "__main__":

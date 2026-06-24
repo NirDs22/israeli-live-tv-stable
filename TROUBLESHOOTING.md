@@ -6,9 +6,11 @@ The channel has no configured playable source. Add a legal source to `user_sourc
 
 ## Channel 12 / Keshet 12
 
-Channel 12 has an isolated resolver path. Open `Diagnostics -> Channel 12 Diagnostics` to test only Channel 12, clear only its cache, or see the `channel12_override.json` path.
+Channel 12 has an isolated dynamic public entitlement resolver. It requests a short-lived free playback ticket immediately before playback and never stores that ticket. Open `Diagnostics -> Channel 12 Diagnostics` to test only Channel 12, clear only its cache, or see the `channel12_override.json` path.
 
 If you add an override, use only a legal user-provided source. Bad override JSON is ignored and will not affect other channels.
+
+The dynamic flow depends on Mako's public web-player endpoint and reviewed relative stream paths, so Mako can change or reject it without notice. The addon tries alternate reviewed paths and configured fallbacks. Errors, diagnostics, cache, generated M3U files, and health reports do not contain temporary tickets.
 
 ## inputstream.adaptive Missing
 

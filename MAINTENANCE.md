@@ -16,6 +16,12 @@ The job:
 - Opens or updates an issue when broken sources still need investigation.
 - Emails `nird.daus62@gmail.com` when a break/crash is detected or when the job made a safe maintenance change.
 
+### Keshet 12
+
+Keshet 12 is checked differently from static channels. For every reviewed relative path, the checker performs the public/free Mako entitlement request and validates the temporary HLS manifest. It records only the stable path ID, relative path, and result category. The temporary ticket and tokenized manifest URL are discarded and must never appear in reports, issues, email, cache, diagnostics, M3U files, or channel metadata.
+
+If the primary entitlement path fails but another reviewed path works, the runtime resolver automatically uses the first working fallback. The automation reports the broken path for investigation rather than writing a temporary ticket or silently guessing a new protected endpoint.
+
 ## Replacement Search Policy
 
 If any source breaks, replacement search is needed even when a fallback still works. This prevents the addon from slowly running out of links.

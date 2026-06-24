@@ -6,6 +6,7 @@ from typing import List
 from .cache import CacheStore
 from .models import Channel, PlayableResult, Source, SourceType
 from .resolver import SourceResolver
+from .utils import resolve_addon_asset
 
 
 def _escape(value: str) -> str:
@@ -33,7 +34,7 @@ def generate_m3u(channels: List[Channel], resolver: SourceResolver, output_path:
         attrs = (
             f'tvg-id="{_escape(channel.tvg_id or channel.id)}" '
             f'tvg-name="{_escape(channel.name)}" '
-            f'tvg-logo="{_escape(channel.logo)}" '
+            f'tvg-logo="{_escape(resolve_addon_asset(channel.logo))}" '
             f'group-title="{_escape(channel.category)}"'
         )
         lines.append(f"#EXTINF:-1 {attrs},{channel.name}")

@@ -23,7 +23,7 @@ from .registry import channel_status, load_registry
 from .remote_config import update_remote_channels
 from .resolver import SourceResolver
 from .settings import AddonSettings, get_settings
-from .utils import ADDON_NAME
+from .utils import ADDON_NAME, resolve_addon_asset
 
 
 def parse_params(argv: List[str]) -> Dict[str, str]:
@@ -112,7 +112,12 @@ class Router:
                 ("Clear source cache", f"RunPlugin({self.url(action='clear_cache')})"),
                 ("Show user source instructions", f"RunPlugin({self.url(action='user_source_instructions')})"),
             ]
-            self._add_playable(label, self.url(action="play", channel_id=channel.id), context)
+            self._add_playable(
+                label,
+                self.url(action="play", channel_id=channel.id),
+                context,
+                icon=resolve_addon_asset(channel.logo),
+            )
         self._end_directory()
 
     def play(self, channel_id: str, skip_source_id: str = "") -> None:
@@ -381,11 +386,13 @@ class Router:
         item = xbmcgui.ListItem(label=label)
         xbmcplugin.addDirectoryItem(self.handle, url, item, True)
 
-    def _add_playable(self, label: str, url: str, context: List[tuple[str, str]]) -> None:
+    def _add_playable(self, label: str, url: str, context: List[tuple[str, str]], *, icon: str = "") -> None:
         import xbmcgui  # type: ignore
         import xbmcplugin  # type: ignore
 
         item = xbmcgui.ListItem(label=label)
+        if icon:
+            item.setArt({"icon": icon, "thumb": icon})
         item.setProperty("IsPlayable", "true")
         item.addContextMenuItems(context)
         xbmcplugin.addDirectoryItem(self.handle, url, item, False)

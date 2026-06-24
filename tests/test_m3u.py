@@ -7,6 +7,7 @@ from resources.lib.m3u import generate_m3u
 from resources.lib.models import Channel, Source, SourceType
 from resources.lib.resolver import SourceResolver
 from resources.lib.settings import AddonSettings
+from resources.lib.utils import repo_root
 
 
 class M3UTests(unittest.TestCase):
@@ -41,6 +42,22 @@ class M3UTests(unittest.TestCase):
             generate_m3u(channels, resolver, out)
             text = out.read_text(encoding="utf-8")
             self.assertLess(text.index("One"), text.index("Two"))
+
+    def test_m3u_resolves_bundled_logo_to_absolute_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = CacheStore(Path(tmp) / "cache.json")
+            resolver = SourceResolver(AddonSettings(), cache)
+            channel = Channel(
+                "playable",
+                "Playable",
+                logo="resources/data/logos/kan11.png",
+                sources=[Source("s1", SourceType.DIRECT_HLS, url="https://example.com/a.m3u8")],
+            )
+            out = Path(tmp) / "out.m3u"
+            generate_m3u([channel], resolver, out)
+            text = out.read_text(encoding="utf-8")
+            expected = repo_root() / "resources" / "data" / "logos" / "kan11.png"
+            self.assertIn(f'tvg-logo="{expected}"', text)
 
 
 if __name__ == "__main__":

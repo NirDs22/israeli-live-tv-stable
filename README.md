@@ -7,6 +7,7 @@ The goal is boring stability: open the addon, browse live channels, play a confi
 ## What It Does
 
 - Shows a fast Live Channels list.
+- Includes bundled high-resolution local icons for every channel.
 - Loads bundled channel metadata from local JSON.
 - Supports user-provided legal direct HLS/DASH sources.
 - Supports optional user-owned local TVHeadend mappings.
@@ -43,6 +44,14 @@ The resolver tries sources in this order:
 8. Disabled or unavailable source.
 
 Bundled Israeli channels are intentionally conservative. If a channel has no independently verified legal direct source, it appears as unavailable and explains how to add a user source or TVHeadend mapping.
+
+### Keshet 12 Dynamic Playback
+
+Keshet 12 uses an isolated dynamic public entitlement request immediately before addon playback. The resolver sends one of several reviewed relative Channel 12 paths to Mako's public/free web-player entitlement endpoint using ordinary browser headers. It accepts only a successful free response, builds a temporary `mako-streaming.akamaized.net` manifest URL, validates the HLS manifest, and passes it directly to Kodi.
+
+No login, paid access, DRM bypass, device impersonation, private secret, or hard-coded ticket is used. Temporary tickets and tokenized manifest URLs are never written to `channels.json`, M3U files, logs, diagnostics, cache, or health reports. If the public flow changes, the resolver tries another reviewed path, then configured legal fallbacks, user sources, and TVHeadend. A total failure affects Channel 12 only.
+
+Because tickets are short-lived and intentionally not serialized, generated M3U files use only non-ticket configured Channel 12 fallbacks. Dynamic entitlement playback is performed through the addon itself.
 
 ## User Sources
 
@@ -103,7 +112,7 @@ The M3U excludes disabled sources, info-only pages, missing URLs, and unavailabl
 
 ## Daily Link Maintenance
 
-This repo includes a daily GitHub Actions health check and a Codex maintenance automation plan. The checker tests bundled HLS/DASH links, promotes working fallbacks when a primary breaks, and searches for replacement candidates whenever any source breaks so the addon does not slowly run out of links.
+This repo includes a daily GitHub Actions health check and a Codex maintenance automation plan. The checker tests bundled HLS/DASH links, promotes working fallbacks when a primary breaks, and searches for replacement candidates whenever any source breaks so the addon does not slowly run out of links. Keshet 12 is checked through its public entitlement flow rather than by treating a static tokenless manifest as the final source.
 
 See [MAINTENANCE.md](MAINTENANCE.md) for the rules and commands.
 
