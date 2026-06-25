@@ -51,7 +51,7 @@ Keshet 12 uses an isolated dynamic public entitlement request immediately before
 
 No login, paid access, DRM bypass, device impersonation, private secret, or hard-coded ticket is used. Temporary tickets and tokenized manifest URLs are never written to `channels.json`, M3U files, logs, diagnostics, cache, or health reports. If the public flow changes, the resolver tries another reviewed path, then configured legal fallbacks, user sources, and TVHeadend. A total failure affects Channel 12 only.
 
-Because tickets are short-lived and intentionally not serialized, generated M3U files use only non-ticket configured Channel 12 fallbacks. Dynamic entitlement playback is performed through the addon itself.
+Because tickets are short-lived and intentionally not serialized, the generated M3U uses a stable `plugin://` Channel 12 entry instead of a tokenized stream URL. IPTV Simple invokes the addon when Channel 12 is selected, allowing the addon to request a fresh ticket at playback time without storing it in the playlist.
 
 ## User Sources
 

@@ -59,6 +59,32 @@ class M3UTests(unittest.TestCase):
             expected = repo_root() / "resources" / "data" / "logos" / "kan11.png"
             self.assertIn(f'tvg-logo="{expected}"', text)
 
+    def test_keshet12_m3u_uses_addon_plugin_url(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = CacheStore(Path(tmp) / "cache.json")
+            resolver = SourceResolver(AddonSettings(), cache)
+            channel = Channel(
+                "keshet12",
+                "Keshet 12",
+                sources=[
+                    Source(
+                        "old_static",
+                        SourceType.DIRECT_HLS,
+                        url="https://example.com/static-tokenless.m3u8",
+                    )
+                ],
+            )
+            out = Path(tmp) / "out.m3u"
+            count = generate_m3u([channel], resolver, out)
+            text = out.read_text(encoding="utf-8")
+            self.assertEqual(count, 1)
+            self.assertIn(
+                "plugin://plugin.video.israeli.live.tv.stable/?action=play&channel_id=keshet12",
+                text,
+            )
+            self.assertNotIn("static-tokenless.m3u8", text)
+            self.assertNotIn("ticket=", text)
+
 
 if __name__ == "__main__":
     unittest.main()

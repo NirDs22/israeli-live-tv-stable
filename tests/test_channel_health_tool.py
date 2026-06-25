@@ -127,6 +127,33 @@ class ChannelHealthToolTests(unittest.TestCase):
             self.assertFalse(report["keshet12"]["checked"])
             self.assertTrue(report["keshet12"]["replacement_search_needed"])
 
+    def test_retired_channels_are_ignored_by_automation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_json(
+                Path(tmp) / "channels.json",
+                {
+                    "channels": [
+                        {"id": "keshet12", "name": "Keshet 12", "enabled": True, "sources": []},
+                        {"id": "makan33", "name": "Makan 33", "enabled": True, "sources": [source("makan")]},
+                        {"id": "ynet_live", "name": "Ynet Live", "enabled": True, "sources": [source("ynet")]},
+                    ]
+                },
+            )
+            write_json(Path(tmp) / "channel_candidates.json", {"channels": {}, "rejected": []})
+            with patch("tools.check_channels.check_public_entitlement_path", return_value=(True, "ok")), patch(
+                "tools.check_channels.check_url"
+            ) as static_check:
+                check_channels.run(self.args(tmp))
+
+            static_check.assert_not_called()
+            report = read_json(Path(tmp) / "report.json")
+            channel_ids = {channel["channel_id"] for channel in report["channels"]}
+            source_channel_ids = {source_item["channel_id"] for source_item in report["sources"]}
+            self.assertNotIn("makan33", channel_ids)
+            self.assertNotIn("ynet_live", channel_ids)
+            self.assertNotIn("makan33", source_channel_ids)
+            self.assertNotIn("ynet_live", source_channel_ids)
+
     def test_broken_fallback_triggers_replacement_search_even_when_primary_works(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.write_channels(tmp, [source("primary", 10), source("fallback", 30)])

@@ -24,7 +24,7 @@ jobs:
           python-version: "3.11"
 
       - name: Run PVR tests
-        run: python -m unittest tests.test_pvr tests.test_diagnostics
+        run: python -m unittest tests.test_pvr tests.test_diagnostics tests.test_m3u
 
       - name: Check PVR setup contract
         run: python tools/check_pvr_contract.py

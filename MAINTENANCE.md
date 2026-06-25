@@ -22,6 +22,8 @@ Keshet 12 is checked differently from static channels. For every reviewed relati
 
 If the primary entitlement path fails but another reviewed path works, the runtime resolver automatically uses the first working fallback. The automation reports the broken path for investigation rather than writing a temporary ticket or silently guessing a new protected endpoint.
 
+Ynet Live (`ynet_live`) and Makan 33 (`makan33`) are retired channel IDs. The registry and maintenance checker ignore them even if they appear in an older cached or external channel file.
+
 ## Replacement Search Policy
 
 If any source breaks, replacement search is needed even when a fallback still works. This prevents the addon from slowly running out of links.

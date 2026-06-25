@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from resources.lib.models import FailureCategory, PLAYABLE_SOURCE_TYPES, SourceType, source_from_dict  # noqa: E402
+from resources.lib.channel_policy import RETIRED_CHANNEL_IDS  # noqa: E402
 from resources.lib.channels.keshet12 import (  # noqa: E402
     DYNAMIC_SOURCE_PREFIX,
     KESHET12_RELATIVE_PATHS,
@@ -334,6 +335,8 @@ def run(args: argparse.Namespace) -> int:
         if not isinstance(channel, dict) or not channel.get("enabled", True):
             continue
         channel_id = str(channel.get("id", ""))
+        if channel_id in RETIRED_CHANNEL_IDS:
+            continue
         channel_name = str(channel.get("name", channel_id))
         sources = keshet12_entitlement_sources() if channel_id == "keshet12" else checked_sources(channel)
         primary = primary_source(sources)

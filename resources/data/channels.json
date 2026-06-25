@@ -282,62 +282,6 @@
       ]
     },
     {
-      "id": "makan33",
-      "name": "Makan 33",
-      "description": "Makan 33 live channel.",
-      "category": "Israel",
-      "logo": "resources/data/logos/makan33.png",
-      "tvg_id": "makan33",
-      "enabled": true,
-      "sources": [
-        {
-          "id": "makan33_public_hls",
-          "type": "DIRECT_HLS",
-          "priority": 10,
-          "enabled": true,
-          "url": "https://r.il.cdn-redge.media/livehls/oil/kancdn-live/live/makan/live.livx/playlist.m3u8?dvr=21600000",
-          "headers": {},
-          "mime_type": "application/vnd.apple.mpegurl",
-          "requires_inputstream_adaptive": false,
-          "is_user_configured": false,
-          "evidence_url": "https://www.kan.org.il/live/",
-          "last_verified_at": "2026-06-17",
-          "notes": "Public Makan 33 HLS candidate. Verified reachable from Israel on 2026-06-17; CDN may be Israel-only."
-        },
-        {
-          "id": "makan33_public_dash_fallback",
-          "type": "DIRECT_DASH",
-          "priority": 30,
-          "enabled": true,
-          "url": "https://r.il.cdn-redge.media/livedash/oil/kancdn-live/live/makan/live.livx?dvr=14400000",
-          "headers": {},
-          "mime_type": "application/dash+xml",
-          "inputstream_type": "mpd",
-          "requires_inputstream_adaptive": true,
-          "is_user_configured": false,
-          "evidence_url": "https://www.kan.org.il/live/",
-          "last_verified_at": "2026-06-17",
-          "notes": "DASH fallback for Makan 33. Requires inputstream.adaptive. Verified reachable from Israel on 2026-06-17; CDN may be Israel-only."
-        },
-        {
-          "id": "makan33_tvheadend_placeholder",
-          "type": "LOCAL_TVHEADEND",
-          "priority": 20,
-          "enabled": true,
-          "url": "",
-          "notes": "Configure local TVHeadend for stable legal playback."
-        },
-        {
-          "id": "makan33_official_info",
-          "type": "OFFICIAL_WEB_PAGE_INFO_ONLY",
-          "priority": 100,
-          "enabled": true,
-          "url": "https://www.kan.org.il/live/",
-          "notes": "Official web page only. Direct playback is not bundled until independently verified."
-        }
-      ]
-    },
-    {
       "id": "knesset",
       "name": "Knesset Channel",
       "description": "Knesset live channel.",
@@ -449,31 +393,6 @@
           "enabled": true,
           "url": "",
           "notes": "Configure local TVHeadend for stable legal playback."
-        }
-      ]
-    },
-    {
-      "id": "ynet_live",
-      "name": "Ynet Live",
-      "description": "Ynet live video stream candidate.",
-      "category": "Israel",
-      "logo": "resources/data/logos/ynet_live.png",
-      "tvg_id": "ynet_live",
-      "enabled": true,
-      "sources": [
-        {
-          "id": "ynet_live_public_hls",
-          "type": "DIRECT_HLS",
-          "priority": 10,
-          "enabled": true,
-          "url": "https://ynet-live-01.ynet-pic1.yit.co.il/ynet/live.m3u8",
-          "headers": {},
-          "mime_type": "application/vnd.apple.mpegurl",
-          "requires_inputstream_adaptive": false,
-          "is_user_configured": false,
-          "evidence_url": "https://www.ynet.co.il/",
-          "last_verified_at": "2026-06-17",
-          "notes": "Public Ynet live HLS candidate. Verified reachable on 2026-06-17."
         }
       ]
     },

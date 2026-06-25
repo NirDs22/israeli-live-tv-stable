@@ -82,6 +82,22 @@ class RegistryTests(unittest.TestCase):
         self.assertTrue(Path(resolved).is_absolute())
         self.assertTrue(resolved.endswith("resources/data/logos/kan11.png"))
 
+    def test_retired_channels_are_filtered_even_if_config_contains_them(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = self.paths(tmp)
+            write_json(
+                paths.bundled_channels,
+                {
+                    "channels": [
+                        {"id": "kan11", "name": "Kan 11", "sources": []},
+                        {"id": "makan33", "name": "Makan 33", "sources": []},
+                        {"id": "ynet_live", "name": "Ynet Live", "sources": []},
+                    ]
+                },
+            )
+            registry = load_registry(paths, AddonSettings(remote_config_enabled=False))
+            self.assertEqual([channel.id for channel in registry.channels], ["kan11"])
+
 
 if __name__ == "__main__":
     unittest.main()

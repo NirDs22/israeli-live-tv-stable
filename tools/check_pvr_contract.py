@@ -14,9 +14,11 @@ def require(text: str, needle: str, message: str) -> None:
 
 def main() -> int:
     pvr = (ROOT / "resources" / "lib" / "pvr.py").read_text(encoding="utf-8")
+    m3u = (ROOT / "resources" / "lib" / "m3u.py").read_text(encoding="utf-8")
     router = (ROOT / "resources" / "lib" / "router.py").read_text(encoding="utf-8")
     diagnostics = (ROOT / "resources" / "lib" / "diagnostics.py").read_text(encoding="utf-8")
     tests = (ROOT / "tests" / "test_pvr.py").read_text(encoding="utf-8")
+    m3u_tests = (ROOT / "tests" / "test_m3u.py").read_text(encoding="utf-8")
 
     require(pvr, "configure_iptv_simple(path_text)", "PVR setup must configure stable local M3U file first.")
     require(pvr, "verify_iptv_simple_local_file", "PVR setup must verify official IPTV Simple settings.")
@@ -30,9 +32,12 @@ def main() -> int:
         raise SystemExit("PVR setup must not use local URL fallback as a success path.")
     require(router, "set_pvr_setup_status", "Setup flow must record PVR setup status for diagnostics.")
     require(diagnostics, "IPTV Simple setup mode:", "Diagnostics must show IPTV Simple setup mode.")
+    require(m3u, 'if channel.id == "keshet12":', "Channel 12 must keep its isolated M3U playback branch.")
+    require(m3u, "plugin://{ADDON_ID}/", "Channel 12 M3U playback must route through the addon plugin.")
     require(tests, "test_instance_repair_backs_up_and_updates_known_settings", "PVR tests must cover XML backup and repair.")
     require(tests, "test_setup_success_requires_instance_repair_even_when_public_settings_verify", "PVR tests must require instance repair for success.")
     require(tests, "test_setup_rejects_empty_generated_playlist", "PVR tests must reject empty generated playlists.")
+    require(m3u_tests, "test_keshet12_m3u_uses_addon_plugin_url", "M3U tests must cover Channel 12 plugin playback.")
 
     print("PVR setup contract OK")
     return 0

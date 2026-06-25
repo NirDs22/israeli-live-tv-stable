@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional
 
 from .config import RuntimePaths, load_user_config
+from .channel_policy import RETIRED_CHANNEL_IDS
 from .models import Channel, Source, SourceType, ValidationReport, channel_from_dict
 from .remote_config import load_remote_channels_if_valid
 from .settings import AddonSettings
@@ -70,6 +71,7 @@ def _replace_tvheadend_placeholder(channel: Channel, source: Source) -> None:
 
 def load_registry(paths: RuntimePaths, settings: AddonSettings) -> RegistryResult:
     channels, report = load_base_channels(paths)
+    channels = [channel for channel in channels if channel.id not in RETIRED_CHANNEL_IDS]
     user_config = load_user_config(paths, settings)
     report.extend(user_config.validation)
     by_id = {channel.id: channel for channel in channels}

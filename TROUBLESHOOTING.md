@@ -12,6 +12,8 @@ If you add an override, use only a legal user-provided source. Bad override JSON
 
 The dynamic flow depends on Mako's public web-player endpoint and reviewed relative stream paths, so Mako can change or reject it without notice. The addon tries alternate reviewed paths and configured fallbacks. Errors, diagnostics, cache, generated M3U files, and health reports do not contain temporary tickets.
 
+If Channel 12 works from the addon but not from Kodi `TV -> Channels`, regenerate the M3U or run `Setup / Repair Kodi TV`, then restart Kodi. The Channel 12 M3U entry must begin with `plugin://plugin.video.israeli.live.tv.stable/` so IPTV Simple calls the dynamic resolver.
+
 ## inputstream.adaptive Missing
 
 Some DASH/HLS sources may require `inputstream.adaptive`. Install and enable it from Kodi's add-on repository. Diagnostics shows whether it is detected.
