@@ -29,11 +29,13 @@ class ChannelHealthToolTests(unittest.TestCase):
         values = {
             "channels": str(base / "channels.json"),
             "candidates": str(base / "channel_candidates.json"),
+            "discovery_config": str(base / "channel_discovery.json"),
             "report_json": str(base / "report.json"),
             "report_markdown": str(base / "report.md"),
             "timeout": 1,
             "apply_fallbacks": False,
             "apply_candidates": False,
+            "discover_new_channels": False,
             "dry_run": False,
             "fail_on_broken": False,
         }
@@ -210,6 +212,55 @@ class ChannelHealthToolTests(unittest.TestCase):
             summary = report["channels"][0]
             self.assertTrue(summary["all_sources_broken"])
             self.assertEqual(summary["broken_source_count"], 2)
+
+    def test_discovery_reports_missing_channel_16_from_public_directory(self):
+        config = {
+            "sources": [{"id": "directory", "enabled": True, "url": "https://example.com/channels"}],
+            "targets": [{"id": "channel16", "name": "Channel 16", "enabled": True, "aliases": ["Channel 16", "ערוץ 16"]}],
+        }
+
+        class Response:
+            status = 200
+            headers = None
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self, size):
+                return b"<html><body>New Hebrew lineup: Channel 16</body></html>"
+
+        findings = check_channels.discover_new_channels(config, {"kan11"}, timeout=1, http_open=lambda request, timeout: Response())
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].status, "found_missing_channel")
+        self.assertEqual(findings[0].target_id, "channel16")
+        self.assertEqual(findings[0].matched_alias, "Channel 16")
+
+    def test_discovery_does_not_report_already_configured_channel(self):
+        config = {
+            "sources": [{"id": "directory", "enabled": True, "url": "https://example.com/channels"}],
+            "targets": [{"id": "channel16", "name": "Channel 16", "enabled": True, "aliases": ["Channel 16"]}],
+        }
+
+        class Response:
+            status = 200
+            headers = None
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self, size):
+                return b"Channel 16"
+
+        findings = check_channels.discover_new_channels(config, {"channel16"}, timeout=1, http_open=lambda request, timeout: Response())
+
+        self.assertEqual(findings, [])
 
 
 if __name__ == "__main__":

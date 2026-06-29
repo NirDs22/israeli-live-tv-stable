@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import argparse
+import html
 import json
+import re
 import socket
 import sys
 import urllib.error
@@ -32,6 +34,7 @@ NON_BUNDLED_SOURCE_TYPES = {SourceType.LOCAL_M3U.value, SourceType.LOCAL_TVHEADE
 INFO_SOURCE_TYPES = {SourceType.OFFICIAL_WEB_PAGE_INFO_ONLY.value, SourceType.DISABLED.value}
 DEFAULT_CHANNELS_PATH = ROOT / "resources" / "data" / "channels.json"
 DEFAULT_CANDIDATES_PATH = ROOT / "resources" / "data" / "channel_candidates.json"
+DEFAULT_DISCOVERY_PATH = ROOT / "resources" / "data" / "channel_discovery.json"
 DEFAULT_REPORT_JSON = ROOT / "channel-health-report.json"
 DEFAULT_REPORT_MD = ROOT / "channel-health-report.md"
 
@@ -60,6 +63,17 @@ class CandidateResult:
 
 
 @dataclass
+class DiscoveryFinding:
+    target_id: str
+    target_name: str
+    source_id: str
+    status: str
+    message: str
+    evidence_url: str = ""
+    matched_alias: str = ""
+
+
+@dataclass
 class ChannelSummary:
     channel_id: str
     channel_name: str
@@ -80,6 +94,7 @@ class HealthReport:
     channels: list[ChannelSummary] = field(default_factory=list)
     sources: list[SourceCheck] = field(default_factory=list)
     candidates: list[CandidateResult] = field(default_factory=list)
+    discovery: list[DiscoveryFinding] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     keshet12: dict[str, Any] = field(default_factory=dict)
 
@@ -265,6 +280,121 @@ def load_candidates(path: Path) -> dict[str, list[dict[str, Any]]]:
     return candidates
 
 
+def load_discovery_config(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {"sources": [], "targets": []}
+    data = load_json(path)
+    if not isinstance(data.get("sources", []), list):
+        raise ValueError("channel_discovery.json sources must be a list")
+    if not isinstance(data.get("targets", []), list):
+        raise ValueError("channel_discovery.json targets must be a list")
+    return data
+
+
+def normalize_search_text(value: str) -> str:
+    text = html.unescape(value)
+    text = re.sub(r"<script\b.*?</script>", " ", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<style\b.*?</style>", " ", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.casefold()
+
+
+def fetch_discovery_text(source: dict[str, Any], timeout: int, http_open=urllib.request.urlopen) -> tuple[bool, str]:
+    url = str(source.get("url", ""))
+    if not url:
+        return False, "missing discovery source URL"
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 IsraeliLiveTVStableChannelDiscovery/1.0",
+            "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8",
+        },
+    )
+    try:
+        with http_open(request, timeout=timeout) as response:
+            status = getattr(response, "status", 200)
+            if status >= 400:
+                return False, f"http_{status}"
+            raw = response.read(500_000)
+            charset = "utf-8"
+            headers = getattr(response, "headers", None)
+            if headers and hasattr(headers, "get_content_charset"):
+                charset = headers.get_content_charset() or "utf-8"
+            return True, raw.decode(charset, errors="replace")
+    except urllib.error.HTTPError as exc:
+        return False, f"http_{exc.code}"
+    except urllib.error.URLError as exc:
+        reason = getattr(exc, "reason", exc)
+        if isinstance(reason, socket.timeout):
+            return False, FailureCategory.NETWORK_TIMEOUT.value
+        return False, FailureCategory.DNS_ERROR.value
+    except TimeoutError:
+        return False, FailureCategory.NETWORK_TIMEOUT.value
+    except Exception as exc:
+        return False, f"unknown_error: {exc.__class__.__name__}"
+
+
+def discover_new_channels(
+    config: dict[str, Any],
+    configured_channel_ids: set[str],
+    timeout: int,
+    http_open=urllib.request.urlopen,
+) -> list[DiscoveryFinding]:
+    sources = [source for source in config.get("sources", []) if isinstance(source, dict) and source.get("enabled", True)]
+    targets = [target for target in config.get("targets", []) if isinstance(target, dict) and target.get("enabled", True)]
+    findings: list[DiscoveryFinding] = []
+
+    for source in sources:
+        source_id = str(source.get("id", "discovery_source"))
+        ok, text_or_error = fetch_discovery_text(source, timeout, http_open=http_open)
+        if not ok:
+            findings.append(
+                DiscoveryFinding(
+                    target_id="",
+                    target_name="",
+                    source_id=source_id,
+                    status="source_failed",
+                    message=text_or_error,
+                    evidence_url=str(source.get("url", "")),
+                )
+            )
+            continue
+
+        normalized = normalize_search_text(text_or_error)
+        for target in targets:
+            target_id = str(target.get("id", "")).strip()
+            target_name = str(target.get("name", target_id)).strip()
+            if not target_id or target_id in configured_channel_ids or target_id in RETIRED_CHANNEL_IDS:
+                continue
+            aliases = [str(alias).strip() for alias in target.get("aliases", []) if str(alias).strip()]
+            matched_alias = next((alias for alias in aliases if normalize_search_text(alias) in normalized), "")
+            if matched_alias:
+                findings.append(
+                    DiscoveryFinding(
+                        target_id=target_id,
+                        target_name=target_name,
+                        source_id=source_id,
+                        status="found_missing_channel",
+                        message="Potential new Hebrew/Israeli channel found in a public directory. Manual legal source review is required before adding it.",
+                        evidence_url=str(source.get("url", "")),
+                        matched_alias=matched_alias,
+                    )
+                )
+            else:
+                findings.append(
+                    DiscoveryFinding(
+                        target_id=target_id,
+                        target_name=target_name,
+                        source_id=source_id,
+                        status="not_found",
+                        message="Target aliases were not present in this source.",
+                        evidence_url=str(source.get("url", "")),
+                    )
+                )
+    return findings
+
+
 def generate_report_markdown(report: HealthReport) -> str:
     lines = [
         "# Channel Health Report",
@@ -298,6 +428,16 @@ def generate_report_markdown(report: HealthReport) -> str:
         for candidate in report.candidates:
             lines.append(f"- `{candidate.channel_id}` / `{candidate.source_id}`: {candidate.status} - {candidate.message}")
 
+    if report.discovery:
+        lines.extend(["", "## New Channel Discovery", ""])
+        for finding in report.discovery:
+            target = f"`{finding.target_id}`" if finding.target_id else "-"
+            alias = f" matched `{finding.matched_alias}`" if finding.matched_alias else ""
+            lines.append(
+                f"- {target} from `{finding.source_id}`: {finding.status}{alias}. "
+                f"{finding.message} Evidence: {finding.evidence_url or '-'}"
+            )
+
     if report.keshet12:
         lines.extend(["", "## Channel 12 / Keshet 12", ""])
         lines.append(f"- Checked: {'yes' if report.keshet12.get('checked') else 'no'}")
@@ -322,12 +462,14 @@ def generate_report_markdown(report: HealthReport) -> str:
 def run(args: argparse.Namespace) -> int:
     channels_path = Path(args.channels)
     candidates_path = Path(args.candidates)
+    discovery_path = Path(args.discovery_config)
     payload = load_json(channels_path)
     channels = payload.get("channels")
     if not isinstance(channels, list):
         raise ValueError("channels.json must contain a list named channels")
 
     candidate_map = load_candidates(candidates_path)
+    discovery_config = load_discovery_config(discovery_path)
     report = HealthReport(checked_at=utc_now())
     changed = False
 
@@ -454,6 +596,17 @@ def run(args: argparse.Namespace) -> int:
         }
         report.notes.append("Keshet 12 channel entry is missing from channels.json.")
 
+    if args.discover_new_channels:
+        configured_channel_ids = {
+            str(channel.get("id", ""))
+            for channel in channels
+            if isinstance(channel, dict) and channel.get("id")
+        }
+        report.discovery = discover_new_channels(discovery_config, configured_channel_ids, args.timeout)
+        found_missing = [finding for finding in report.discovery if finding.status == "found_missing_channel"]
+        if found_missing:
+            report.notes.append("New channel discovery found possible missing channels; manual source/legal review is required.")
+
     report.changed = changed
     if changed and not args.dry_run:
         write_json(channels_path, payload)
@@ -467,6 +620,9 @@ def run(args: argparse.Namespace) -> int:
         print(f"{len(broken_sources)} source(s) need replacement search. See {args.report_markdown}.")
     else:
         print(f"All checked sources passed. See {args.report_markdown}.")
+    discovery_hits = [finding for finding in report.discovery if finding.status == "found_missing_channel"]
+    if discovery_hits:
+        print(f"{len(discovery_hits)} possible new channel(s) found. See {args.report_markdown}.")
     if changed:
         print("Safe channel metadata changes were prepared.")
     return 1 if broken_sources and args.fail_on_broken else 0
@@ -476,11 +632,13 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Check Israeli Live TV Stable bundled channel links.")
     parser.add_argument("--channels", default=str(DEFAULT_CHANNELS_PATH))
     parser.add_argument("--candidates", default=str(DEFAULT_CANDIDATES_PATH))
+    parser.add_argument("--discovery-config", default=str(DEFAULT_DISCOVERY_PATH))
     parser.add_argument("--report-json", default=str(DEFAULT_REPORT_JSON))
     parser.add_argument("--report-markdown", default=str(DEFAULT_REPORT_MD))
     parser.add_argument("--timeout", type=int, default=6)
     parser.add_argument("--apply-fallbacks", action="store_true")
     parser.add_argument("--apply-candidates", action="store_true")
+    parser.add_argument("--discover-new-channels", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--fail-on-broken", action="store_true")
     return parser.parse_args()

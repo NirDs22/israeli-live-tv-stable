@@ -1,0 +1,39 @@
+{
+  "notes": [
+    "Discovery is evidence-only. It may report possible new Hebrew/Israeli channels, but it must not add streams automatically.",
+    "Every discovered channel still requires legal/public/free source review before it is added to channels.json.",
+    "Do not use piracy lists, paid TV directories, protected APIs, DRM bypasses, fake headers, cookies, or tokenized stream URLs."
+  ],
+  "sources": [
+    {
+      "id": "wikipedia_israel_tv_channels",
+      "enabled": true,
+      "type": "public_channel_directory",
+      "url": "https://en.wikipedia.org/wiki/List_of_television_channels_in_Israel",
+      "notes": "Public channel directory used only to detect possible new channel names/LCNs. Not proof of a playable legal stream."
+    },
+    {
+      "id": "wikipedia_idan_plus",
+      "enabled": true,
+      "type": "public_channel_directory",
+      "url": "https://en.wikipedia.org/wiki/Idan%2B",
+      "notes": "Public Idan+ directory used only to detect possible free-to-air channel lineup changes."
+    }
+  ],
+  "targets": [
+    {
+      "id": "channel16",
+      "name": "Channel 16",
+      "enabled": true,
+      "country": "Israel",
+      "language": "Hebrew",
+      "aliases": [
+        "Channel 16",
+        "channel 16",
+        "LCN 16",
+        "ערוץ 16"
+      ],
+      "notes": "Watch target requested for new-channel discovery. Detection only creates a report/issue; it does not add a source."
+    }
+  ]
+}

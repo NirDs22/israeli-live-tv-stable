@@ -112,7 +112,7 @@ The M3U excludes disabled sources, info-only pages, missing URLs, and unavailabl
 
 ## Daily Link Maintenance
 
-This repo includes a daily GitHub Actions health check and a Codex maintenance automation plan. The checker tests bundled HLS/DASH links, promotes working fallbacks when a primary breaks, and searches for replacement candidates whenever any source breaks so the addon does not slowly run out of links. Keshet 12 is checked through its public entitlement flow rather than by treating a static tokenless manifest as the final source.
+This repo includes a daily GitHub Actions health check and a Codex maintenance automation plan. The checker tests bundled HLS/DASH links, promotes working fallbacks when a primary breaks, tests reviewed replacement candidates whenever any source breaks, and scans configured public channel directories for watched new-channel targets such as Channel 16. Keshet 12 is checked through its public entitlement flow rather than by treating a static tokenless manifest as the final source.
 
 See [MAINTENANCE.md](MAINTENANCE.md) for the rules and commands.
 

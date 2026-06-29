@@ -12,8 +12,9 @@ The job:
 - Checks bundled `DIRECT_HLS` and `DIRECT_DASH` sources.
 - Promotes a working fallback if a primary source fails.
 - Tests reviewed candidates from `resources/data/channel_candidates.json`.
+- Scans configured public channel directories from `resources/data/channel_discovery.json` for watched new-channel targets such as Channel 16.
 - Opens a pull request for safe metadata changes.
-- Opens or updates an issue when broken sources still need investigation.
+- Opens or updates an issue when broken sources or new-channel discovery findings still need investigation.
 - Emails `nird.daus62@gmail.com` when a break/crash is detected or when the job made a safe maintenance change.
 
 ### Keshet 12
@@ -29,6 +30,17 @@ Ynet Live (`ynet_live`) and Makan 33 (`makan33`) are retired channel IDs. The re
 If any source breaks, replacement search is needed even when a fallback still works. This prevents the addon from slowly running out of links.
 
 New links may be used only when they are legal, public, free, and backed by evidence. Do not add piracy playlists, paid TV channels, protected APIs, DRM bypasses, fake headers, cookies, tokens, device IDs, or private app endpoints.
+
+## New Channel Discovery
+
+New-channel discovery is evidence-only. The checker fetches configured public directory pages and looks for watched aliases, for example `Channel 16` / `ערוץ 16`. If a watched channel appears and is not already in `channels.json`, the daily workflow reports it, opens or updates a GitHub issue, and sends email when mail secrets are configured.
+
+Discovery does not add a channel automatically and does not add streams. A found channel still needs manual review for:
+
+- Hebrew/Israel relevance.
+- Free/legal/public availability.
+- Official or credible evidence.
+- A playable source that does not require piracy lists, paid access, DRM bypass, protected APIs, fake headers, cookies, tokens, or private app endpoints.
 
 ## Candidate Links
 
