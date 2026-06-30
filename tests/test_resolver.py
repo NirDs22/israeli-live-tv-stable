@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from resources.lib.cache import CacheStore
 from resources.lib.models import Channel, FailureResult, PlayableResult, Source, SourceType
@@ -43,6 +44,30 @@ class ResolverTests(unittest.TestCase):
         result = resolver.resolve(channel)
         self.assertIsInstance(result, PlayableResult)
         self.assertEqual(result.source.id, "bundled")
+
+    def test_network_validation_skips_broken_primary(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        cache = CacheStore(Path(tmp.name) / "cache.json")
+        resolver = SourceResolver(AddonSettings(), cache, validate_network=True)
+        channel = Channel(
+            id="reshet13",
+            name="Reshet 13",
+            sources=[
+                Source("primary", SourceType.DIRECT_HLS, priority=10, url="https://primary/stream.m3u8"),
+                Source("fallback", SourceType.DIRECT_HLS, priority=30, url="https://fallback/stream.m3u8"),
+            ],
+        )
+
+        def fake_check(source, timeout):
+            return (source.id == "fallback", "ok" if source.id == "fallback" else "http_5xx")
+
+        with patch("resources.lib.resolver.check_source", side_effect=fake_check):
+            result = resolver.resolve(channel)
+
+        self.assertIsInstance(result, PlayableResult)
+        self.assertEqual(result.source.id, "fallback")
+        self.assertEqual(cache.source_state("primary")["last_failure_category"], "http_5xx")
 
     def test_tvheadend_preference_behavior(self):
         resolver, _ = self.resolver(AddonSettings(prefer_tvheadend=True, tvheadend_enabled=True))

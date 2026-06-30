@@ -144,7 +144,7 @@ class Router:
         resolver = SourceResolver(
             self.settings,
             self.cache,
-            validate_network=False,
+            validate_network=True,
             inputstream_adaptive_available=inputstream_adaptive_available(),
         )
         result = resolver.resolve(channel, skip_source_id=skip_source_id)
