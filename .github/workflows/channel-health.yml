@@ -1,6 +1,13 @@
 name: Channel health
 
 on:
+  pull_request:
+    paths:
+      - "resources/data/channels.json"
+      - "resources/data/logos/**"
+      - "tools/validate_channel_catalog.py"
+      - "tests/test_channel_catalog_pipeline.py"
+      - ".github/workflows/channel-health.yml"
   workflow_dispatch:
   schedule:
     - cron: "0 22 * * *"
@@ -12,7 +19,31 @@ permissions:
   issues: write
 
 jobs:
+  new-channel-publication-gate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository with base history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run tests
+        run: python -m unittest discover -s tests
+
+      - name: Enforce the new-channel publication contract
+        run: |
+          python tools/validate_channel_catalog.py \
+            --base-ref "origin/${{ github.base_ref }}" \
+            --check-network
+
   channel-health:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     env:
       MAIL_CONFIGURED: ${{ secrets.MAIL_SERVER != '' && secrets.MAIL_PORT != '' && secrets.MAIL_USERNAME != '' && secrets.MAIL_PASSWORD != '' && secrets.MAIL_FROM != '' }}
@@ -37,6 +68,10 @@ jobs:
       - name: Run tests
         if: steps.israel-time.outputs.run_checks == 'true'
         run: python -m unittest discover -s tests
+
+      - name: Validate channel catalog and remote logos
+        if: steps.israel-time.outputs.run_checks == 'true'
+        run: python tools/validate_channel_catalog.py --check-network
 
       - name: Check channels and apply safe fixes
         if: steps.israel-time.outputs.run_checks == 'true'

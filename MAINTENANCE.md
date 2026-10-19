@@ -35,6 +35,24 @@ New links may be used only when they are legal, public, free, and backed by evid
 
 New-channel discovery is evidence-only. The checker fetches configured public directory pages and looks for watched aliases, for example `Channel 16` / `ערוץ 16`. If a watched channel appears and is not already in `channels.json`, the daily workflow reports it, opens or updates a GitHub issue, and sends email when mail secrets are configured.
 
+## New-channel publication gate
+
+A newly discovered channel is not publishable until `tools/validate_channel_catalog.py` accepts the complete entry. Pull requests that change the catalog run this gate automatically and are rejected when any required part is missing.
+
+Every new enabled channel must include:
+
+- A stable channel ID, display name, discovery date, and official or clearly attributable evidence.
+- An HTTPS PNG logo of at least 128 by 128 pixels plus `logo_evidence_url`. The logo must be remotely reachable because an already-installed addon can download `channels.json` but cannot receive a new bundled image file without an addon upgrade.
+- At least one legal, public, free, directly playable source with evidence URL, discovery and verification dates, notes, empty custom headers, and `validation_result` set to `manifest_and_media_segment_ok`.
+- At least one HLS source that passes an ordinary manifest, media-playlist, and complete media-segment probe without cookies, tokens, device IDs, DRM, private APIs, fake headers, or bypasses. DASH-only additions remain manual-review items until equivalent segment validation is implemented.
+- Successful unit tests, catalog validation, normal channel health checking, M3U generation, and verification that the merged public `channels.json` is visible at the URL used by Kodi.
+
+Use this command before publishing a new channel:
+
+```sh
+python tools/validate_channel_catalog.py --base-ref origin/main --check-network
+```
+
 Discovery does not add a channel automatically and does not add streams. A found channel still needs manual review for:
 
 - Hebrew/Israel relevance.

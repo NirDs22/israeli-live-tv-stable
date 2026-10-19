@@ -11,6 +11,10 @@ class BundledChannelDataTests(unittest.TestCase):
         self.assertEqual(report.errors, [])
         channel16 = next((channel for channel in channels if channel.id == "channel16"), None)
         self.assertIsNotNone(channel16)
+        self.assertEqual(
+            channel16.logo,
+            "https://ch16israel.vod.immergo.tv/ch16israel/uploaded/cf155825-9ee8-4ebf-80b7-bc8440f7c84f.png",
+        )
         source = next((source for source in channel16.sources if source.id == "channel16_official_hls"), None)
         self.assertIsNotNone(source)
         self.assertTrue(source.playable)
