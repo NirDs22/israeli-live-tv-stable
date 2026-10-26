@@ -79,7 +79,7 @@
           "mime_type": "application/vnd.apple.mpegurl",
           "requires_inputstream_adaptive": false,
           "is_user_configured": false,
-          "evidence_url": "https://www.mako.co.il/news-channel2/Channel-2-Newscast-q3_2019/Article-3bf5c3a8e967f51006.htm",
+          "evidence_url": "https://www.mako.co.il/mako-vod-live-tv/VOD-6540b8dcb64fd31006.htm",
           "last_verified_at": "2026-06-17",
           "notes": "Legacy public Channel 12 fallback only. Normal addon playback first uses the isolated dynamic public entitlement resolver; this static endpoint may be unstable or blocked by Akamai/Kodi."
         },
@@ -96,8 +96,13 @@
           "type": "OFFICIAL_WEB_PAGE_INFO_ONLY",
           "priority": 100,
           "enabled": true,
-          "url": "https://www.mako.co.il/news-channel2/Channel-2-Newscast-q3_2019/Article-3bf5c3a8e967f51006.htm",
-          "notes": "Official web page only. Direct playback is not bundled because no verified stable legal direct source is configured."
+          "url": "https://www.mako.co.il/mako-vod-live-tv/VOD-6540b8dcb64fd31006.htm",
+          "evidence_url": "https://www.mako.co.il/mako-vod-live-tv/VOD-6540b8dcb64fd31006.htm",
+          "source_type": "official_broadcaster_live_page_metadata",
+          "discovered_at": "2026-10-26",
+          "last_verified_at": "2026-10-26",
+          "validation_result": "manifest_and_media_segment_ok",
+          "notes": "Official +12 page publicly exposes /stream/hls/live/20000821/k12rh-dvr/index.m3u8?b-in-range=0-800. The addon requests a temporary public entitlement ticket at playback time and never stores it; the master manifest, media playlist, and one complete media segment were validated without cookies or bypasses."
         }
       ]
     },
@@ -182,30 +187,32 @@
         {
           "id": "now14_public_hls",
           "type": "DIRECT_HLS",
-          "priority": 10,
+          "priority": 30,
           "enabled": true,
           "url": "https://ch14channel14.encoders.immergo.tv/app/2/streamPlaylist.m3u8",
           "headers": {},
           "mime_type": "application/vnd.apple.mpegurl",
           "requires_inputstream_adaptive": false,
           "is_user_configured": false,
-          "evidence_url": "https://www.now14.co.il/",
-          "last_verified_at": "2026-06-17",
-          "notes": "Public Now 14 HLS candidate. Verified reachable on 2026-06-17."
+          "evidence_url": "https://tv.c14.co.il/live",
+          "last_verified_at": "2026-10-26",
+          "validation_result": "dns_error",
+          "notes": "Legacy public Now 14 HLS endpoint. Its hostname failed DNS on 2026-10-26; retained at lower priority while a safe replacement is sought."
         },
         {
           "id": "now14_public_hls_fallback_redge",
           "type": "DIRECT_HLS",
-          "priority": 30,
+          "priority": 10,
           "enabled": true,
           "url": "https://r.il.cdn-redge.media/livehls/oil/ch14/live/ch14/live.livx/playlist.m3u8?dvr=21600000&bitrate=5692000&audioId=1&videoId=0",
           "headers": {},
           "mime_type": "application/vnd.apple.mpegurl",
           "requires_inputstream_adaptive": false,
           "is_user_configured": false,
-          "evidence_url": "https://www.now14.co.il/",
-          "last_verified_at": "2026-06-17",
-          "notes": "Fallback Now 14 Redge HLS candidate. Verified reachable on 2026-06-17."
+          "evidence_url": "https://tv.c14.co.il/live",
+          "last_verified_at": "2026-10-26",
+          "validation_result": "manifest_and_media_segment_ok",
+          "notes": "Official-attributable Now 14 Redge HLS fallback. The manifest, media playlist, and one complete media segment were verified on 2026-10-26 and it was promoted after the legacy primary hostname failed DNS."
         },
         {
           "id": "now14_tvheadend_placeholder",

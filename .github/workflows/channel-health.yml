@@ -80,6 +80,7 @@ jobs:
             --apply-fallbacks \
             --apply-candidates \
             --discover-new-channels \
+            --discover-mako-paths \
             --report-json channel-health-report.json \
             --report-markdown channel-health-report.md
 
@@ -112,6 +113,7 @@ jobs:
           python tools/check_channels.py \
             --dry-run \
             --discover-new-channels \
+            --discover-mako-paths \
             --report-json channel-health-issue-report.json \
             --report-markdown channel-health-issue-report.md || true
           python - <<'PY'
@@ -126,7 +128,13 @@ jobs:
               finding for finding in report.get("discovery", [])
               if finding.get("status") in {"found_missing_channel", "source_failed"}
           ]
-          if not broken and not discovery:
+          mako_attention = [
+              finding for finding in report.get("mako_paths", [])
+              if finding.get("status") in {
+                  "verified_review_required", "source_failed", "validation_failed", "required_page_no_paths"
+              }
+          ]
+          if not broken and not discovery and not mako_attention:
               raise SystemExit(0)
 
           title = "Daily channel health: review needed"
@@ -180,10 +188,16 @@ jobs:
               finding for finding in report.get("discovery", [])
               if finding.get("status") in {"found_missing_channel", "source_failed"}
           ]
+          mako_attention = [
+              finding for finding in report.get("mako_paths", [])
+              if finding.get("status") in {
+                  "verified_review_required", "source_failed", "validation_failed", "required_page_no_paths"
+              }
+          ]
           keshet12 = report.get("keshet12") or {}
           changed = bool(report.get("changed"))
           keshet12_attention = bool(keshet12 and (not keshet12.get("checked") or keshet12.get("replacement_search_needed") or keshet12.get("fallback_promoted") or keshet12.get("all_sources_broken")))
-          should_email = bool(broken or promoted or candidates or changed or keshet12_attention or discovery)
+          should_email = bool(broken or promoted or candidates or changed or keshet12_attention or discovery or mako_attention)
 
           lines = [
               "Daily Israeli Live TV Stable channel maintenance report.",
@@ -191,6 +205,7 @@ jobs:
               f"Checked at: {report.get('checked_at', '-')}",
               f"Broken sources detected: {len(broken)}",
               f"New channel discovery findings: {len(discovery)}",
+              f"Mako path findings requiring attention: {len(mako_attention)}",
               f"Safe metadata changes prepared: {'yes' if changed else 'no'}",
               f"Channel 12 status: {keshet12.get('primary_status', '-') if keshet12 else '-'}",
               "",
@@ -212,6 +227,12 @@ jobs:
                       f"{finding.get('status')} - {finding.get('message')} "
                       f"Evidence: {finding.get('evidence_url') or '-'}"
                   )
+          if mako_attention:
+              for finding in mako_attention:
+                  lines.append(
+                      f"- Mako discovery from {finding.get('evidence_url') or '-'}: "
+                      f"{finding.get('status')} - {finding.get('validation_result') or '-'}"
+                  )
           if keshet12:
               lines.append(
                   "- Channel 12 checked: "
@@ -221,11 +242,11 @@ jobs:
               )
               for action in keshet12.get("repair_actions") or []:
                   lines.append(f"- Channel 12 repair action: {action}")
-          if broken or discovery:
+          if broken or discovery or mako_attention:
               lines.append("- Opened or updated a GitHub issue/report for remaining broken sources or discovery findings.")
           if os.environ.get("PR_URL"):
               lines.append(f"- Pull request: {os.environ['PR_URL']}")
-          if not promoted and not candidates and not changed and (broken or discovery):
+          if not promoted and not candidates and not changed and (broken or discovery or mako_attention):
               lines.append("- No safe automatic fix was available; replacement search is still needed.")
           if not should_email:
               lines.append("- No broken sources or maintenance changes were detected.")
@@ -237,7 +258,7 @@ jobs:
 
           body = "\n".join(lines) + "\n"
           Path("channel-health-email.txt").write_text(body, encoding="utf-8")
-          subject = "Israeli Live TV Stable: break/discovery detected" if broken or discovery else "Israeli Live TV Stable: maintenance update"
+          subject = "Israeli Live TV Stable: break/discovery detected" if broken or discovery or mako_attention else "Israeli Live TV Stable: maintenance update"
           with github_output.open("a", encoding="utf-8") as handle:
               handle.write(f"should_email={'true' if should_email else 'false'}\n")
               handle.write(f"subject={subject}\n")

@@ -24,7 +24,7 @@ OVERRIDE_FILENAME = "channel12_override.json"
 LOG_PREFIX = "[Keshet12]"
 ENTITLEMENT_URL = "https://mass.mako.co.il/ClicksStatistics/entitlementsServicesV2.jsp"
 STREAM_BASE_URL = "https://mako-streaming.akamaized.net"
-OFFICIAL_LIVE_PAGE = "https://www.mako.co.il/news-channel2/Channel-2-Newscast-q3_2019/Article-3bf5c3a8e967f51006.htm"
+OFFICIAL_LIVE_PAGE = "https://www.mako.co.il/mako-vod-live-tv/VOD-6540b8dcb64fd31006.htm"
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
@@ -40,6 +40,7 @@ ENTITLEMENT_HEADERS = {
 }
 KESHET12_RELATIVE_PATHS: Tuple[Tuple[str, str], ...] = (
     ("primary", "/direct/hls/live/2033791/k12/index.m3u8?as=1"),
+    ("current_plus12_dvr", "/stream/hls/live/20000821/k12rh-dvr/index.m3u8?b-in-range=0-800"),
     ("news_fallback", "/stream/hls/live/2033791/k12n12wad/index.m3u8?b-in-range=0-700"),
     ("dvr_fallback", "/direct/hls/live/2033791/k12dvr/index.m3u8?b-in-range=800-2700"),
     ("n12_fallback", "/n12/hls/live/2103938/k12/index.m3u8?b-in-range=0-1100"),
@@ -266,6 +267,81 @@ def check_public_entitlement_path(
     try:
         resolve_entitled_manifest(relative_path, timeout, http_open=http_open, validate_manifest=True)
         return True, "ok"
+    except Keshet12ResolutionError as exc:
+        return False, exc.category.value
+    except Exception:
+        return False, FailureCategory.KESHET12_UNKNOWN_ERROR.value
+
+
+def _hls_child_url(parent_url: str, child_reference: str) -> str:
+    child_url = urllib.parse.urljoin(parent_url, child_reference.strip())
+    parent = urllib.parse.urlsplit(parent_url)
+    child = urllib.parse.urlsplit(child_url)
+    if parent.query and not child.query:
+        child_url = urllib.parse.urlunsplit(child._replace(query=parent.query))
+    return child_url
+
+
+def _first_hls_uri(playlist: str) -> str:
+    return next((line.strip() for line in playlist.splitlines() if line.strip() and not line.startswith("#")), "")
+
+
+def check_public_entitlement_media_path(
+    relative_path: str,
+    timeout: float,
+    *,
+    http_open: HttpOpen | None = None,
+) -> Tuple[bool, str]:
+    """Validate an entitled HLS master/media playlist and one complete segment."""
+    try:
+        manifest_url = resolve_entitled_manifest(
+            relative_path,
+            timeout,
+            http_open=http_open,
+            validate_manifest=False,
+        )
+        manifest_bytes = _read_response(
+            manifest_url,
+            PUBLIC_WEB_HEADERS,
+            timeout,
+            http_open=http_open,
+            limit=1_000_001,
+        )
+        manifest = manifest_bytes.decode("utf-8", errors="replace")
+        if not manifest.startswith("#EXTM3U"):
+            raise Keshet12ResolutionError(FailureCategory.KESHET12_MANIFEST_INVALID, "invalid HLS manifest")
+
+        media_url = manifest_url
+        media = manifest
+        if "#EXT-X-STREAM-INF" in manifest:
+            variant_reference = _first_hls_uri(manifest)
+            if not variant_reference:
+                raise Keshet12ResolutionError(FailureCategory.KESHET12_MANIFEST_INVALID, "master playlist has no variant")
+            media_url = _hls_child_url(manifest_url, variant_reference)
+            media_bytes = _read_response(
+                media_url,
+                PUBLIC_WEB_HEADERS,
+                timeout,
+                http_open=http_open,
+                limit=2_000_001,
+            )
+            media = media_bytes.decode("utf-8", errors="replace")
+
+        if not media.startswith("#EXTM3U") or "#EXTINF" not in media:
+            raise Keshet12ResolutionError(FailureCategory.KESHET12_MANIFEST_INVALID, "invalid HLS media playlist")
+        segment_reference = _first_hls_uri(media)
+        if not segment_reference:
+            raise Keshet12ResolutionError(FailureCategory.KESHET12_MANIFEST_INVALID, "media playlist has no segment")
+        segment = _read_response(
+            _hls_child_url(media_url, segment_reference),
+            PUBLIC_WEB_HEADERS,
+            timeout,
+            http_open=http_open,
+            limit=32_000_001,
+        )
+        if len(segment) < 1024 or len(segment) > 32_000_000:
+            raise Keshet12ResolutionError(FailureCategory.KESHET12_MANIFEST_INVALID, "media segment was incomplete")
+        return True, "manifest_and_media_segment_ok"
     except Keshet12ResolutionError as exc:
         return False, exc.category.value
     except Exception:

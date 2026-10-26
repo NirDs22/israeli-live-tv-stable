@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import sys
 from argparse import Namespace
 from pathlib import Path
 from unittest.mock import patch
@@ -36,6 +37,7 @@ class ChannelHealthToolTests(unittest.TestCase):
             "apply_fallbacks": False,
             "apply_candidates": False,
             "discover_new_channels": False,
+            "discover_mako_paths": False,
             "dry_run": False,
             "fail_on_broken": False,
         }
@@ -50,6 +52,93 @@ class ChannelHealthToolTests(unittest.TestCase):
 
     def write_candidates(self, tmp, candidates):
         write_json(Path(tmp) / "channel_candidates.json", {"channels": {"kan11": candidates}, "rejected": []})
+
+    def test_cli_accepts_discover_mako_paths(self):
+        with patch.object(sys, "argv", ["check_channels.py", "--discover-mako-paths"]):
+            args = check_channels.parse_args()
+
+        self.assertTrue(args.discover_mako_paths)
+
+    def test_mako_discovery_validates_safe_official_path_and_rejects_tokenized_url(self):
+        body = b"x" * 600_000 + (
+            '<script type="application/ld+json">'
+            '{"contentUrl":"https:\\/\\/mako-streaming.akamaized.net\\/stream\\/hls\\/live\\/20000821\\/k12rh-dvr\\/index.m3u8?b-in-range=0-800",'
+            '"unsafe":"https://mako-streaming.akamaized.net/private/index.m3u8?token=secret"}'
+            "</script>"
+        ).encode("utf-8")
+
+        class Response:
+            status = 200
+            headers = None
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self, size):
+                return body[:size]
+
+        with patch(
+            "tools.check_channels.check_public_entitlement_media_path",
+            return_value=(True, "manifest_and_media_segment_ok"),
+        ):
+            findings = check_channels.discover_mako_paths(
+                timeout=1,
+                pages=["https://www.mako.co.il/official-live"],
+                http_open=lambda request, timeout: Response(),
+            )
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].relative_path, "/stream/hls/live/20000821/k12rh-dvr/index.m3u8?b-in-range=0-800")
+        self.assertEqual(findings[0].status, "verified_known_path")
+        self.assertEqual(findings[0].validation_result, "manifest_and_media_segment_ok")
+        self.assertNotIn("secret", str(findings))
+
+    def test_run_records_mako_discovery_in_json_and_markdown_reports(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.write_channels(tmp, [source("primary", 10)])
+            self.write_candidates(tmp, [])
+            finding = check_channels.MakoPathFinding(
+                evidence_url="https://www.mako.co.il/official-live",
+                relative_path="/stream/hls/live/example/index.m3u8?b-in-range=0-800",
+                status="verified_review_required",
+                validation_result="manifest_and_media_segment_ok",
+                already_reviewed=False,
+            )
+            with patch("tools.check_channels.check_url", return_value=(True, "ok")), patch(
+                "tools.check_channels.discover_mako_paths", return_value=[finding]
+            ):
+                check_channels.run(self.args(tmp, discover_mako_paths=True))
+
+            report = read_json(Path(tmp) / "report.json")
+            self.assertEqual(report["mako_paths"][0]["status"], "verified_review_required")
+            markdown = (Path(tmp) / "report.md").read_text(encoding="utf-8")
+            self.assertIn("## Mako / +12 Path Discovery", markdown)
+            self.assertIn("manifest_and_media_segment_ok", markdown)
+
+    def test_mako_discovery_marks_missing_path_on_required_live_page(self):
+        class Response:
+            status = 200
+            headers = None
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self, size):
+                return b"<html>official live page without player metadata</html>"
+
+        findings = check_channels.discover_mako_paths(
+            timeout=1,
+            pages=[check_channels.OFFICIAL_LIVE_PAGE],
+            http_open=lambda request, timeout: Response(),
+        )
+
+        self.assertEqual(findings[0].status, "required_page_no_paths")
 
     def test_broken_primary_with_working_fallback_promotes_fallback_and_still_needs_search(self):
         with tempfile.TemporaryDirectory() as tmp:

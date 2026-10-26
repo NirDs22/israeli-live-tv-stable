@@ -8,6 +8,7 @@ import re
 import socket
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
@@ -25,6 +26,8 @@ from resources.lib.channel_policy import RETIRED_CHANNEL_IDS  # noqa: E402
 from resources.lib.channels.keshet12 import (  # noqa: E402
     DYNAMIC_SOURCE_PREFIX,
     KESHET12_RELATIVE_PATHS,
+    OFFICIAL_LIVE_PAGE,
+    check_public_entitlement_media_path,
     check_public_entitlement_path,
 )
 
@@ -37,6 +40,10 @@ DEFAULT_CANDIDATES_PATH = ROOT / "resources" / "data" / "channel_candidates.json
 DEFAULT_DISCOVERY_PATH = ROOT / "resources" / "data" / "channel_discovery.json"
 DEFAULT_REPORT_JSON = ROOT / "channel-health-report.json"
 DEFAULT_REPORT_MD = ROOT / "channel-health-report.md"
+MAKO_DISCOVERY_PAGES = (OFFICIAL_LIVE_PAGE, "https://www.mako.co.il/mako-vod")
+MAKO_STREAM_HOST = "mako-streaming.akamaized.net"
+MAKO_SAFE_QUERY_KEYS = {"as", "b-in-range"}
+MAKO_SENSITIVE_QUERY_KEYS = {"auth", "exp", "expires", "hdnea", "hdnts", "sig", "signature", "ticket", "token"}
 
 
 @dataclass
@@ -74,6 +81,15 @@ class DiscoveryFinding:
 
 
 @dataclass
+class MakoPathFinding:
+    evidence_url: str
+    relative_path: str
+    status: str
+    validation_result: str
+    already_reviewed: bool = False
+
+
+@dataclass
 class ChannelSummary:
     channel_id: str
     channel_name: str
@@ -95,6 +111,7 @@ class HealthReport:
     sources: list[SourceCheck] = field(default_factory=list)
     candidates: list[CandidateResult] = field(default_factory=list)
     discovery: list[DiscoveryFinding] = field(default_factory=list)
+    mako_paths: list[MakoPathFinding] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     keshet12: dict[str, Any] = field(default_factory=dict)
 
@@ -316,7 +333,8 @@ def fetch_discovery_text(source: dict[str, Any], timeout: int, http_open=urllib.
             status = getattr(response, "status", 200)
             if status >= 400:
                 return False, f"http_{status}"
-            raw = response.read(500_000)
+            max_bytes = max(1, min(int(source.get("max_bytes", 500_000)), 3_000_000))
+            raw = response.read(max_bytes)
             charset = "utf-8"
             headers = getattr(response, "headers", None)
             if headers and hasattr(headers, "get_content_charset"):
@@ -333,6 +351,75 @@ def fetch_discovery_text(source: dict[str, Any], timeout: int, http_open=urllib.
         return False, FailureCategory.NETWORK_TIMEOUT.value
     except Exception as exc:
         return False, f"unknown_error: {exc.__class__.__name__}"
+
+
+def extract_official_mako_paths(page_text: str) -> list[str]:
+    normalized = html.unescape(page_text).replace("\\/", "/")
+    matches = re.findall(
+        r"https://mako-streaming\.akamaized\.net/[^\s\"'<>\\]+?\.m3u8(?:\?[^\s\"'<>\\]+)?",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    paths: list[str] = []
+    for raw_url in matches:
+        parsed = urllib.parse.urlsplit(raw_url)
+        if parsed.scheme != "https" or parsed.hostname != MAKO_STREAM_HOST:
+            continue
+        query = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+        query_keys = {key.casefold() for key, _ in query}
+        if query_keys & MAKO_SENSITIVE_QUERY_KEYS or not query_keys.issubset(MAKO_SAFE_QUERY_KEYS):
+            continue
+        relative_path = parsed.path
+        if query:
+            relative_path = f"{relative_path}?{urllib.parse.urlencode(query)}"
+        if relative_path not in paths:
+            paths.append(relative_path)
+    return paths
+
+
+def discover_mako_paths(
+    timeout: int,
+    *,
+    pages: Iterable[str] = MAKO_DISCOVERY_PAGES,
+    http_open=urllib.request.urlopen,
+) -> list[MakoPathFinding]:
+    reviewed_paths = {relative_path for _, relative_path in KESHET12_RELATIVE_PATHS}
+    findings: list[MakoPathFinding] = []
+    seen_paths: set[str] = set()
+    for page_url in pages:
+        ok, page_or_error = fetch_discovery_text(
+            {"url": page_url, "max_bytes": 3_000_000},
+            timeout,
+            http_open=http_open,
+        )
+        if not ok:
+            findings.append(MakoPathFinding(page_url, "", "source_failed", page_or_error, False))
+            continue
+        page_paths = extract_official_mako_paths(page_or_error)
+        if not page_paths:
+            status = "required_page_no_paths" if page_url == OFFICIAL_LIVE_PAGE else "no_paths_found"
+            findings.append(MakoPathFinding(page_url, "", status, "not_applicable", False))
+            continue
+        for relative_path in page_paths:
+            if relative_path in seen_paths:
+                continue
+            seen_paths.add(relative_path)
+            valid, validation_result = check_public_entitlement_media_path(relative_path, timeout)
+            already_reviewed = relative_path in reviewed_paths
+            if valid:
+                status = "verified_known_path" if already_reviewed else "verified_review_required"
+            else:
+                status = "validation_failed"
+            findings.append(
+                MakoPathFinding(
+                    evidence_url=page_url,
+                    relative_path=relative_path,
+                    status=status,
+                    validation_result=validation_result,
+                    already_reviewed=already_reviewed,
+                )
+            )
+    return findings
 
 
 def discover_new_channels(
@@ -436,6 +523,15 @@ def generate_report_markdown(report: HealthReport) -> str:
             lines.append(
                 f"- {target} from `{finding.source_id}`: {finding.status}{alias}. "
                 f"{finding.message} Evidence: {finding.evidence_url or '-'}"
+            )
+
+    if report.mako_paths:
+        lines.extend(["", "## Mako / +12 Path Discovery", ""])
+        for finding in report.mako_paths:
+            reviewed = "yes" if finding.already_reviewed else "no"
+            lines.append(
+                f"- `{finding.relative_path or '-'}`: {finding.status}; validation={finding.validation_result}; "
+                f"already reviewed={reviewed}. Evidence: {finding.evidence_url}"
             )
 
     if report.keshet12:
@@ -607,6 +703,16 @@ def run(args: argparse.Namespace) -> int:
         if found_missing:
             report.notes.append("New channel discovery found possible missing channels; manual source/legal review is required.")
 
+    if args.discover_mako_paths:
+        report.mako_paths = discover_mako_paths(args.timeout)
+        if any(finding.status == "verified_review_required" for finding in report.mako_paths):
+            report.notes.append("Official Mako metadata exposed a verified path that requires reviewed catalog integration.")
+        if any(
+            finding.status in {"source_failed", "validation_failed", "required_page_no_paths"}
+            for finding in report.mako_paths
+        ):
+            report.notes.append("Mako path discovery was incomplete or found a path that failed validation.")
+
     report.changed = changed
     if changed and not args.dry_run:
         write_json(channels_path, payload)
@@ -639,6 +745,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--apply-fallbacks", action="store_true")
     parser.add_argument("--apply-candidates", action="store_true")
     parser.add_argument("--discover-new-channels", action="store_true")
+    parser.add_argument("--discover-mako-paths", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--fail-on-broken", action="store_true")
     return parser.parse_args()

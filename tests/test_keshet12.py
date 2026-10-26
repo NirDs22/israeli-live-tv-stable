@@ -11,8 +11,10 @@ from resources.lib.channels.keshet12 import (
     DYNAMIC_SOURCE_PREFIX,
     ENTITLEMENT_HEADERS,
     KESHET12_RELATIVE_PATHS,
+    OFFICIAL_LIVE_PAGE,
     PUBLIC_WEB_HEADERS,
     build_channel12_diagnostics,
+    check_public_entitlement_media_path,
     channel12_override_path,
     disable_channel12_override,
     load_channel12_override,
@@ -80,6 +82,39 @@ def empty_channel() -> Channel:
 
 
 class Keshet12Tests(unittest.TestCase):
+    def test_entitlement_media_validation_reads_complete_segment_without_persisting_ticket(self):
+        opener = FakeOpen(
+            ticket_response(),
+            FakeResponse(b"#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1000\nvariant.m3u8\n"),
+            FakeResponse(b"#EXTM3U\n#EXTINF:4.0,\nsegment.ts\n"),
+            FakeResponse(b"x" * 4096),
+        )
+
+        ok, status = check_public_entitlement_media_path(
+            "/stream/hls/live/20000821/k12rh-dvr/index.m3u8?b-in-range=0-800",
+            5,
+            http_open=opener,
+        )
+
+        self.assertTrue(ok)
+        self.assertEqual(status, "manifest_and_media_segment_ok")
+        self.assertEqual(len(opener.requests), 4)
+        self.assertIn("variant.m3u8?hdnea=temporary-secret&exp=1", opener.requests[2][0].full_url)
+        self.assertIn("segment.ts?hdnea=temporary-secret&exp=1", opener.requests[3][0].full_url)
+
+    def test_current_official_plus12_path_is_reviewed(self):
+        self.assertEqual(
+            OFFICIAL_LIVE_PAGE,
+            "https://www.mako.co.il/mako-vod-live-tv/VOD-6540b8dcb64fd31006.htm",
+        )
+        self.assertIn(
+            (
+                "current_plus12_dvr",
+                "/stream/hls/live/20000821/k12rh-dvr/index.m3u8?b-in-range=0-800",
+            ),
+            KESHET12_RELATIVE_PATHS,
+        )
+
     def test_missing_override_is_ignored(self):
         with tempfile.TemporaryDirectory() as tmp:
             source, errors, exists = load_channel12_override(paths_for(tmp))
@@ -157,7 +192,7 @@ class Keshet12Tests(unittest.TestCase):
             self.assertIsInstance(result, PlayableResult)
             self.assertEqual(result.source.id, f"{DYNAMIC_SOURCE_PREFIX}{KESHET12_RELATIVE_PATHS[1][0]}")
             second_entitlement_url = opener.requests[1][0].full_url
-            self.assertIn("k12n12wad", second_entitlement_url)
+            self.assertIn("k12rh-dvr", second_entitlement_url)
 
     def test_timeout_is_channel_specific(self):
         with tempfile.TemporaryDirectory() as tmp:
