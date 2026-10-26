@@ -408,6 +408,9 @@
       "name": "Channel 16",
       "description": "Official free Israeli Hebrew Channel 16 live stream.",
       "category": "Israel",
+      "logo": "https://ch16israel.vod.immergo.tv/ch16israel/uploaded/cf155825-9ee8-4ebf-80b7-bc8440f7c84f.png",
+      "logo_evidence_url": "https://ch16.co.il/player/channel/6a3448c2e20c91b5cd8c9da1",
+      "discovered_at": "2026-10-19",
       "tvg_id": "channel16",
       "enabled": true,
       "sources": [
@@ -422,7 +425,9 @@
           "requires_inputstream_adaptive": false,
           "is_user_configured": false,
           "evidence_url": "https://ch16.co.il/player/channel/6a3448c2e20c91b5cd8c9da1",
+          "discovered_at": "2026-10-19",
           "last_verified_at": "2026-10-19",
+          "validation_result": "manifest_and_media_segment_ok",
           "notes": "Official player HLS request verified with a plain unauthenticated HTTP 200 response and one complete 3.6 MB MPEG-TS media segment. No cookies, custom headers, token parameters, EXT-X-KEY encryption, or DRM were required."
         },
         {
