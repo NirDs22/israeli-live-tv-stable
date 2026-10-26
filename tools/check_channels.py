@@ -397,7 +397,8 @@ def discover_mako_paths(
             continue
         page_paths = extract_official_mako_paths(page_or_error)
         if not page_paths:
-            findings.append(MakoPathFinding(page_url, "", "no_paths_found", "not_applicable", False))
+            status = "required_page_no_paths" if page_url == OFFICIAL_LIVE_PAGE else "no_paths_found"
+            findings.append(MakoPathFinding(page_url, "", status, "not_applicable", False))
             continue
         for relative_path in page_paths:
             if relative_path in seen_paths:
@@ -706,7 +707,10 @@ def run(args: argparse.Namespace) -> int:
         report.mako_paths = discover_mako_paths(args.timeout)
         if any(finding.status == "verified_review_required" for finding in report.mako_paths):
             report.notes.append("Official Mako metadata exposed a verified path that requires reviewed catalog integration.")
-        if any(finding.status in {"source_failed", "validation_failed"} for finding in report.mako_paths):
+        if any(
+            finding.status in {"source_failed", "validation_failed", "required_page_no_paths"}
+            for finding in report.mako_paths
+        ):
             report.notes.append("Mako path discovery was incomplete or found a path that failed validation.")
 
     report.changed = changed

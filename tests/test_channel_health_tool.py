@@ -118,6 +118,28 @@ class ChannelHealthToolTests(unittest.TestCase):
             self.assertIn("## Mako / +12 Path Discovery", markdown)
             self.assertIn("manifest_and_media_segment_ok", markdown)
 
+    def test_mako_discovery_marks_missing_path_on_required_live_page(self):
+        class Response:
+            status = 200
+            headers = None
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self, size):
+                return b"<html>official live page without player metadata</html>"
+
+        findings = check_channels.discover_mako_paths(
+            timeout=1,
+            pages=[check_channels.OFFICIAL_LIVE_PAGE],
+            http_open=lambda request, timeout: Response(),
+        )
+
+        self.assertEqual(findings[0].status, "required_page_no_paths")
+
     def test_broken_primary_with_working_fallback_promotes_fallback_and_still_needs_search(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.write_channels(tmp, [source("primary", 10), source("fallback", 30)])
