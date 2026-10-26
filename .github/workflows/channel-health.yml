@@ -45,6 +45,7 @@ jobs:
             --apply-fallbacks \
             --apply-candidates \
             --discover-new-channels \
+            --discover-mako-paths \
             --report-json channel-health-report.json \
             --report-markdown channel-health-report.md
 
@@ -77,6 +78,7 @@ jobs:
           python tools/check_channels.py \
             --dry-run \
             --discover-new-channels \
+            --discover-mako-paths \
             --report-json channel-health-issue-report.json \
             --report-markdown channel-health-issue-report.md || true
           python - <<'PY'

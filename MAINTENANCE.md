@@ -70,8 +70,10 @@ python3 tools/check_channels.py
 Promote working fallbacks and add reviewed candidates:
 
 ```bash
-python3 tools/check_channels.py --apply-fallbacks --apply-candidates
+python3 tools/check_channels.py --apply-fallbacks --apply-candidates --discover-new-channels --discover-mako-paths
 ```
+
+`--discover-mako-paths` inspects only the current official Mako/+12 pages, rejects tokenized or unknown-host URLs, and validates the public entitlement manifest, media playlist, and one complete media segment. Newly exposed verified paths are reported for review; temporary tickets are never written to disk or logs.
 
 Fail the command when any checked source is broken:
 
