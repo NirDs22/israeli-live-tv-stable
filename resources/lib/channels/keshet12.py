@@ -24,7 +24,7 @@ OVERRIDE_FILENAME = "channel12_override.json"
 LOG_PREFIX = "[Keshet12]"
 ENTITLEMENT_URL = "https://mass.mako.co.il/ClicksStatistics/entitlementsServicesV2.jsp"
 STREAM_BASE_URL = "https://mako-streaming.akamaized.net"
-OFFICIAL_LIVE_PAGE = "https://www.mako.co.il/news-channel2/Channel-2-Newscast-q3_2019/Article-3bf5c3a8e967f51006.htm"
+OFFICIAL_LIVE_PAGE = "https://www.mako.co.il/mako-vod-live-tv/VOD-6540b8dcb64fd31006.htm"
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
@@ -40,6 +40,7 @@ ENTITLEMENT_HEADERS = {
 }
 KESHET12_RELATIVE_PATHS: Tuple[Tuple[str, str], ...] = (
     ("primary", "/direct/hls/live/2033791/k12/index.m3u8?as=1"),
+    ("current_plus12_dvr", "/stream/hls/live/20000821/k12rh-dvr/index.m3u8?b-in-range=0-800"),
     ("news_fallback", "/stream/hls/live/2033791/k12n12wad/index.m3u8?b-in-range=0-700"),
     ("dvr_fallback", "/direct/hls/live/2033791/k12dvr/index.m3u8?b-in-range=800-2700"),
     ("n12_fallback", "/n12/hls/live/2103938/k12/index.m3u8?b-in-range=0-1100"),
