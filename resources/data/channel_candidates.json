@@ -7,7 +7,25 @@
   "channels": {
     "kan11": [],
     "keshet12": [],
-    "reshet13": [],
+    "reshet13": [
+      {
+        "id": "reshet13_official_mobile_no_subs_hls",
+        "type": "DIRECT_HLS",
+        "priority": 70,
+        "enabled": true,
+        "url": "https://dsk76kvc9kie6.cloudfront.net/media/cdefce3a-14ec-46cc-a147-1275c4a8b9ed/mainManifest.m3u8",
+        "headers": {},
+        "mime_type": "application/vnd.apple.mpegurl",
+        "requires_inputstream_adaptive": false,
+        "is_user_configured": false,
+        "evidence_url": "https://13tv.co.il/live/",
+        "source_type": "official broadcaster live-page HLS",
+        "date_found": "2026-06-25",
+        "last_verified_at": "2026-06-25",
+        "validation_result": "HTTP 200 with an HLS manifest using an unmodified public GET request",
+        "notes": "Official Reshet 13 live page publishes this as the mobile live_no_subs source. Reviewed as a lower-priority replacement candidate after fallback_1 timed out."
+      }
+    ],
     "now14": [],
     "kan_educational": [],
     "knesset": [],
