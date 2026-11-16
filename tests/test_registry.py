@@ -77,6 +77,39 @@ class RegistryTests(unittest.TestCase):
             self.assertEqual(registry.channels, [])
             self.assertTrue(registry.validation.errors)
 
+    def test_channel_json_preserves_reviewed_mako_path_metadata(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = self.paths(tmp)
+            write_json(
+                paths.bundled_channels,
+                {
+                    "channels": [
+                        {
+                            "id": "keshet12",
+                            "name": "Keshet 12",
+                            "sources": [
+                                {
+                                    "id": "keshet12_current_plus12_dvr",
+                                    "type": "OFFICIAL_WEB_PAGE_INFO_ONLY",
+                                    "url": "https://www.mako.co.il/mako-vod-live-tv/VOD-6540b8dcb64fd31006.htm",
+                                    "mako_relative_path": "/stream/hls/live/20000821/k12rh-dvr/index.m3u8?b-in-range=0-800",
+                                    "source_type": "official_broadcaster_live_page_metadata",
+                                    "discovered_at": "2026-10-26",
+                                    "validation_result": "manifest_and_media_segment_ok",
+                                }
+                            ],
+                        }
+                    ]
+                },
+            )
+
+            source = load_registry(paths, AddonSettings(remote_config_enabled=False)).get("keshet12").sources[0]
+
+            self.assertEqual(source.mako_relative_path, "/stream/hls/live/20000821/k12rh-dvr/index.m3u8?b-in-range=0-800")
+            self.assertEqual(source.source_type, "official_broadcaster_live_page_metadata")
+            self.assertEqual(source.discovered_at, "2026-10-26")
+            self.assertEqual(source.validation_result, "manifest_and_media_segment_ok")
+
     def test_relative_channel_logo_resolves_inside_addon(self):
         resolved = resolve_addon_asset("resources/data/logos/kan11.png")
         self.assertTrue(Path(resolved).is_absolute())

@@ -62,7 +62,11 @@ class Source:
     requires_inputstream_adaptive: bool = False
     is_user_configured: bool = False
     evidence_url: str = ""
+    source_type: str = ""
+    discovered_at: str = ""
     last_verified_at: str = ""
+    validation_result: str = ""
+    mako_relative_path: str = ""
     notes: str = ""
 
     @property
@@ -142,7 +146,11 @@ def source_from_dict(data: Dict[str, Any], *, user_configured: bool = False) -> 
         requires_inputstream_adaptive=bool(data.get("requires_inputstream_adaptive", False)),
         is_user_configured=bool(data.get("is_user_configured", user_configured)),
         evidence_url=str(data.get("evidence_url", "") or ""),
+        source_type=str(data.get("source_type", "") or ""),
+        discovered_at=str(data.get("discovered_at", "") or ""),
         last_verified_at=str(data.get("last_verified_at", "") or ""),
+        validation_result=str(data.get("validation_result", "") or ""),
+        mako_relative_path=str(data.get("mako_relative_path", "") or ""),
         notes=str(data.get("notes", "") or ""),
     )
 

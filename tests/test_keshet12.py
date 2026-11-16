@@ -3,10 +3,12 @@ import socket
 import tempfile
 import unittest
 import urllib.error
+import urllib.parse
 from pathlib import Path
 from unittest.mock import patch
 
 from resources.lib.cache import CacheStore
+from resources.lib.channels import keshet12 as keshet12_module
 from resources.lib.channels.keshet12 import (
     DYNAMIC_SOURCE_PREFIX,
     ENTITLEMENT_HEADERS,
@@ -81,7 +83,82 @@ def empty_channel() -> Channel:
     return Channel(id="keshet12", name="Keshet 12", sources=[])
 
 
+def reviewed_mako_path_source(path: str, *, source_id: str = "current_remote") -> Source:
+    return Source(
+        id=source_id,
+        type=SourceType.OFFICIAL_WEB_PAGE_INFO_ONLY,
+        priority=1,
+        enabled=True,
+        url=OFFICIAL_LIVE_PAGE,
+        evidence_url=OFFICIAL_LIVE_PAGE,
+        source_type="official_broadcaster_live_page_metadata",
+        discovered_at="2026-11-16",
+        last_verified_at="2026-11-16",
+        validation_result="manifest_and_media_segment_ok",
+        mako_relative_path=path,
+    )
+
+
 class Keshet12Tests(unittest.TestCase):
+    def test_reviewed_catalog_path_is_tried_before_bundled_defaults(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = paths_for(tmp)
+            remote_path = "/stream/hls/live/99999999/k12-current/index.m3u8?b-in-range=0-800"
+            channel = Channel(
+                id="keshet12",
+                name="Keshet 12",
+                sources=[reviewed_mako_path_source(remote_path)],
+            )
+            opener = FakeOpen(ticket_response(), FakeResponse(b"#EXTM3U\n"))
+
+            result = resolve_keshet12(channel, paths, AddonSettings(), CacheStore(paths.cache), http_open=opener)
+
+            self.assertIsInstance(result, PlayableResult)
+            self.assertEqual(result.source.id, f"{DYNAMIC_SOURCE_PREFIX}current_remote")
+            self.assertIn("99999999%2Fk12-current", opener.requests[0][0].full_url)
+
+    def test_unsafe_or_unverified_catalog_paths_are_rejected(self):
+        absolute = reviewed_mako_path_source("https://evil.example/live.m3u8", source_id="absolute")
+        tokenized = reviewed_mako_path_source("/stream/live.m3u8?HDNEA=secret", source_id="tokenized")
+        unverified = reviewed_mako_path_source("/stream/live.m3u8", source_id="unverified")
+        unverified.validation_result = "manifest_ok"
+        wrong_type = reviewed_mako_path_source("/stream/wrong-type.m3u8", source_id="wrong_type")
+        wrong_type.type = SourceType.DIRECT_HLS
+        channel = Channel(id="keshet12", name="Keshet 12", sources=[absolute, tokenized, unverified, wrong_type])
+
+        self.assertEqual(keshet12_module.reviewed_catalog_paths(channel), ())
+
+    def test_catalog_and_bundled_paths_are_de_duplicated(self):
+        duplicate = reviewed_mako_path_source(KESHET12_RELATIVE_PATHS[0][1], source_id="catalog_current")
+        channel = Channel(id="keshet12", name="Keshet 12", sources=[duplicate])
+
+        ordered = keshet12_module._dynamic_path_order(channel, CacheStore(Path("/nonexistent/cache.json")))
+
+        self.assertEqual(ordered[0], ("catalog_current", KESHET12_RELATIVE_PATHS[0][1]))
+        self.assertEqual(sum(path == KESHET12_RELATIVE_PATHS[0][1] for _, path in ordered), 1)
+
+    def test_reviewed_catalog_path_stays_ahead_of_last_known_bundled_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = CacheStore(Path(tmp) / "cache.json")
+            cache.set_channel12_success(f"{DYNAMIC_SOURCE_PREFIX}primary", SourceType.DIRECT_HLS.value)
+            catalog = reviewed_mako_path_source("/stream/hls/live/99999999/current.m3u8", source_id="catalog_current")
+            channel = Channel(id="keshet12", name="Keshet 12", sources=[catalog])
+
+            ordered = keshet12_module._dynamic_path_order(channel, cache)
+
+            self.assertEqual(ordered[0][0], "catalog_current")
+
+    def test_catalog_without_mako_path_keeps_bundled_defaults(self):
+        channel = Channel(
+            id="keshet12",
+            name="Keshet 12",
+            sources=[Source("info", SourceType.OFFICIAL_WEB_PAGE_INFO_ONLY, url=OFFICIAL_LIVE_PAGE)],
+        )
+
+        ordered = keshet12_module._dynamic_path_order(channel, CacheStore(Path("/nonexistent/cache.json")))
+
+        self.assertEqual(tuple(ordered), KESHET12_RELATIVE_PATHS)
+
     def test_entitlement_media_validation_reads_complete_segment_without_persisting_ticket(self):
         opener = FakeOpen(
             ticket_response(),
@@ -114,6 +191,23 @@ class Keshet12Tests(unittest.TestCase):
             ),
             KESHET12_RELATIVE_PATHS,
         )
+
+    def test_current_official_plus12_path_is_tried_first_for_a_new_session(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = paths_for(tmp)
+            opener = FakeOpen(ticket_response(), FakeResponse(b"#EXTM3U\n"))
+
+            result = resolve_keshet12(
+                empty_channel(),
+                paths,
+                AddonSettings(),
+                CacheStore(paths.cache),
+                http_open=opener,
+            )
+
+            self.assertIsInstance(result, PlayableResult)
+            self.assertEqual(result.source.id, f"{DYNAMIC_SOURCE_PREFIX}current_plus12_dvr")
+            self.assertIn("k12rh-dvr", opener.requests[0][0].full_url)
 
     def test_missing_override_is_ignored(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -192,7 +286,8 @@ class Keshet12Tests(unittest.TestCase):
             self.assertIsInstance(result, PlayableResult)
             self.assertEqual(result.source.id, f"{DYNAMIC_SOURCE_PREFIX}{KESHET12_RELATIVE_PATHS[1][0]}")
             second_entitlement_url = opener.requests[1][0].full_url
-            self.assertIn("k12rh-dvr", second_entitlement_url)
+            expected_lp = "lp=" + urllib.parse.quote_plus(KESHET12_RELATIVE_PATHS[1][1])
+            self.assertIn(expected_lp, second_entitlement_url)
 
     def test_timeout_is_channel_specific(self):
         with tempfile.TemporaryDirectory() as tmp:

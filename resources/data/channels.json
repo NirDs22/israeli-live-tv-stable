@@ -92,7 +92,7 @@
           "notes": "Configure local TVHeadend for stable legal playback."
         },
         {
-          "id": "keshet12_official_info",
+          "id": "current_plus12_dvr",
           "type": "OFFICIAL_WEB_PAGE_INFO_ONLY",
           "priority": 100,
           "enabled": true,
@@ -100,8 +100,9 @@
           "evidence_url": "https://www.mako.co.il/mako-vod-live-tv/VOD-6540b8dcb64fd31006.htm",
           "source_type": "official_broadcaster_live_page_metadata",
           "discovered_at": "2026-10-26",
-          "last_verified_at": "2026-10-26",
+          "last_verified_at": "2026-11-16",
           "validation_result": "manifest_and_media_segment_ok",
+          "mako_relative_path": "/stream/hls/live/20000821/k12rh-dvr/index.m3u8?b-in-range=0-800",
           "notes": "Official +12 page publicly exposes /stream/hls/live/20000821/k12rh-dvr/index.m3u8?b-in-range=0-800. The addon requests a temporary public entitlement ticket at playback time and never stores it; the master manifest, media playlist, and one complete media segment were validated without cookies or bypasses."
         }
       ]
@@ -118,7 +119,7 @@
         {
           "id": "reshet13_public_hls",
           "type": "DIRECT_HLS",
-          "priority": 10,
+          "priority": 30,
           "enabled": true,
           "url": "https://dsk76kvc9kie6.cloudfront.net/media/87f59c77-03f6-4bad-a648-897e095e7360/mainManifest.m3u8",
           "headers": {},
@@ -146,7 +147,7 @@
         {
           "id": "reshet13_public_hls_fallback_1",
           "type": "DIRECT_HLS",
-          "priority": 30,
+          "priority": 10,
           "enabled": true,
           "url": "https://d18b0e6mopany4.cloudfront.net/out/v1/2f2bc414a3db4698a8e94b89eaf2da2a/index.m3u8",
           "headers": {},

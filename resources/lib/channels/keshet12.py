@@ -39,13 +39,27 @@ ENTITLEMENT_HEADERS = {
     "Accept": "application/json, text/plain, */*",
 }
 KESHET12_RELATIVE_PATHS: Tuple[Tuple[str, str], ...] = (
-    ("primary", "/direct/hls/live/2033791/k12/index.m3u8?as=1"),
     ("current_plus12_dvr", "/stream/hls/live/20000821/k12rh-dvr/index.m3u8?b-in-range=0-800"),
+    ("primary", "/direct/hls/live/2033791/k12/index.m3u8?as=1"),
     ("news_fallback", "/stream/hls/live/2033791/k12n12wad/index.m3u8?b-in-range=0-700"),
     ("dvr_fallback", "/direct/hls/live/2033791/k12dvr/index.m3u8?b-in-range=800-2700"),
     ("n12_fallback", "/n12/hls/live/2103938/k12/index.m3u8?b-in-range=0-1100"),
 )
 DYNAMIC_SOURCE_PREFIX = "keshet12_public_entitlement_"
+OFFICIAL_MAKO_EVIDENCE_HOSTS = {"mako.co.il", "www.mako.co.il", "12plus.co.il", "www.12plus.co.il"}
+SENSITIVE_PATH_QUERY_KEYS = {
+    "auth",
+    "device",
+    "deviceid",
+    "expires",
+    "expiry",
+    "hdnea",
+    "hdnts",
+    "sig",
+    "signature",
+    "ticket",
+    "token",
+}
 HttpOpen = Callable[..., object]
 
 
@@ -364,13 +378,58 @@ def _dynamic_source(path_id: str) -> Source:
     )
 
 
-def _dynamic_path_order(cache: CacheStore) -> List[Tuple[str, str]]:
-    paths = list(KESHET12_RELATIVE_PATHS)
+def reviewed_catalog_paths(channel: Channel) -> Tuple[Tuple[str, str], ...]:
+    reviewed: List[Tuple[str, str]] = []
+    for source in sorted(channel.sources, key=lambda item: (item.priority, item.id)):
+        relative_path = source.mako_relative_path.strip()
+        if not source.enabled or source.type != SourceType.OFFICIAL_WEB_PAGE_INFO_ONLY or not relative_path:
+            continue
+        parsed = urllib.parse.urlsplit(relative_path)
+        if (
+            not relative_path.startswith("/")
+            or relative_path.startswith("//")
+            or parsed.scheme
+            or parsed.netloc
+            or parsed.fragment
+            or any(character in relative_path for character in "\r\n\x00")
+        ):
+            continue
+        query_keys = {key.lower() for key, _ in urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)}
+        if query_keys & SENSITIVE_PATH_QUERY_KEYS:
+            continue
+        evidence = urllib.parse.urlsplit(source.evidence_url)
+        if evidence.scheme != "https" or (evidence.hostname or "").lower() not in OFFICIAL_MAKO_EVIDENCE_HOSTS:
+            continue
+        if source.source_type != "official_broadcaster_live_page_metadata":
+            continue
+        if not source.discovered_at or not source.last_verified_at:
+            continue
+        if source.validation_result != "manifest_and_media_segment_ok":
+            continue
+        reviewed.append((source.id, relative_path))
+    return tuple(reviewed)
+
+
+def _dynamic_path_order(channel: Channel, cache: CacheStore) -> List[Tuple[str, str]]:
+    catalog_paths: List[Tuple[str, str]] = []
+    bundled_paths: List[Tuple[str, str]] = []
+    seen: set[str] = set()
+    for path_id, relative_path in reviewed_catalog_paths(channel):
+        if relative_path in seen:
+            continue
+        seen.add(relative_path)
+        catalog_paths.append((path_id, relative_path))
+    for path_id, relative_path in KESHET12_RELATIVE_PATHS:
+        if relative_path in seen:
+            continue
+        seen.add(relative_path)
+        bundled_paths.append((path_id, relative_path))
     last_id = str(cache.channel12_state().get("channel12_last_successful_source", ""))
     if last_id.startswith(DYNAMIC_SOURCE_PREFIX):
         preferred = last_id[len(DYNAMIC_SOURCE_PREFIX) :]
-        paths.sort(key=lambda item: (item[0] != preferred, KESHET12_RELATIVE_PATHS.index(item)))
-    return paths
+        catalog_paths.sort(key=lambda item: item[0] != preferred)
+        bundled_paths.sort(key=lambda item: item[0] != preferred)
+    return catalog_paths + bundled_paths
 
 
 def _try_dynamic_paths(
@@ -384,7 +443,7 @@ def _try_dynamic_paths(
     first_category: FailureCategory | None = None
     deadline = time.monotonic() + 6.0
     per_request_timeout = float(max(1, min(settings.network_timeout_seconds, 4)))
-    for path_id, relative_path in _dynamic_path_order(cache):
+    for path_id, relative_path in _dynamic_path_order(channel, cache):
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             failures.append(f"{path_id}: {FailureCategory.KESHET12_TIMEOUT.value}")
